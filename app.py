@@ -265,10 +265,21 @@ def api_console(server_id):
     if not server:
         abort(404)
     proc = get_server_process(server_id)
-    if not proc or not proc.is_running:
-        return jsonify({'output': '', 'pos': 0, 'running': False})
-    output, pos = get_console_output(server_id)
-    return jsonify({'output': output, 'pos': pos, 'running': True})
+    running = bool(proc and proc.is_running)
+    output = ''
+    pos = 0
+    if proc:
+        output, pos = get_console_output(server_id)
+    if not output:
+        log_file = os.path.join(server['path'], 'logs', 'latest.log')
+        if os.path.isfile(log_file):
+            try:
+                with open(log_file, 'r', errors='replace') as f:
+                    output = f.read()
+                    pos = len(output)
+            except (OSError, PermissionError):
+                pass
+    return jsonify({'output': output, 'pos': pos, 'running': running})
 
 
 @app.route('/api/system/docker', methods=['GET'])
