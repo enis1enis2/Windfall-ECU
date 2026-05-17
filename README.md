@@ -7,6 +7,9 @@ A lightweight Minecraft server management panel for arm64 Linux. Manage servers 
 ### Without Docker
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate#(In linux/Mac)
+.venv\Scripts\activate#(In Windows)
 pip install -r requirements.txt
 python app.py
 ```
