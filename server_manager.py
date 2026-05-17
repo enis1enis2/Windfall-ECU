@@ -175,8 +175,4 @@ def get_server_path(server_id, server_name):
     safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in server_name)
     return os.path.join(SERVERS_DIR, safe_name)
 
-def get_console_output(server_id):
-    proc = get_server_process(server_id)
-    if not proc:
-        return '', 0
-    return proc.buffer.get_all()
+

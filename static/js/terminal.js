@@ -1,4 +1,4 @@
-let terminalState = { socket: null, term: null, pollTimer: null, lastPos: 0, serverId: null };
+let terminalState = { socket: null, term: null, pollTimer: null, since: 0, serverId: null };
 
 async function loadTerminal(serverId) {
   cleanupTerminal();
@@ -17,7 +17,7 @@ async function loadTerminal(serverId) {
   }
 
   container.innerHTML = `
-    <div class="terminal-status-bar" id="term-status">Connecting...</div>
+    <div class="terminal-status-bar" id="term-status">Loading...</div>
     <div id="xterm-container" style="height:calc(100% - 28px)"></div>`;
 
   const term = new Terminal({
@@ -33,19 +33,20 @@ async function loadTerminal(serverId) {
     },
     rows: Math.floor(container.clientHeight / 20) || 24,
     cols: Math.floor(container.clientWidth / 9) || 80,
+    convertEol: true,
   });
 
   term.open(document.getElementById('xterm-container'));
   terminalState.term = term;
 
-  // First, load any existing console output via REST
-  await fetchConsoleHistory(serverId, term);
+  // Load existing output via REST
+  await fetchConsole(serverId, term);
 
-  // Then try WebSocket for live updates
+  // WebSocket for live updates
   tryConnectSocket(serverId, term);
 
-  // Polling fallback
-  terminalState.pollTimer = setInterval(() => pollConsole(serverId, term), 1000);
+  // Polling fallback — every 1.5s get only new lines
+  terminalState.pollTimer = setInterval(() => pollConsole(serverId, term), 1500);
 }
 
 function cleanupTerminal() {
@@ -61,20 +62,20 @@ function cleanupTerminal() {
     terminalState.term.dispose();
     terminalState.term = null;
   }
-  terminalState.lastPos = 0;
+  terminalState.since = 0;
   terminalState.serverId = null;
 }
 
-async function fetchConsoleHistory(serverId, term) {
+async function fetchConsole(serverId, term) {
   try {
-    const data = await api('GET', `/servers/${serverId}/console`);
+    const data = await api('GET', `/servers/${serverId}/console?since=0`);
     if (data.output) {
       term.write(data.output);
     }
-    terminalState.lastPos = data.pos || 0;
+    terminalState.since = data.total || 0;
     setTermStatus(data.running ? 'Connected' : 'Stopped', data.running ? 'connected' : '');
   } catch (e) {
-    setTermStatus('Error loading console', 'error');
+    setTermStatus('Error', 'error');
   }
 }
 
@@ -86,11 +87,11 @@ function tryConnectSocket(serverId, term) {
   });
 
   socket.on('connect_error', () => {
-    setTermStatus('Live: polling (WebSocket unavailable)', 'polling');
+    setTermStatus('Polling (no WebSocket)', 'polling');
   });
 
   socket.on('connect', () => {
-    setTermStatus('Live: WebSocket', 'connected');
+    setTermStatus('WebSocket live', 'connected');
     socket.emit('connect_terminal', { server_id: serverId });
   });
 
@@ -101,7 +102,7 @@ function tryConnectSocket(serverId, term) {
   });
 
   socket.on('disconnect', () => {
-    setTermStatus('Live: polling (disconnected)', 'polling');
+    setTermStatus('Polling (disconnected)', 'polling');
   });
 
   term.onData(data => {
@@ -115,17 +116,16 @@ function tryConnectSocket(serverId, term) {
 
 async function pollConsole(serverId, term) {
   try {
-    const data = await api('GET', `/servers/${serverId}/console`);
-    if (data.output && data.pos > terminalState.lastPos) {
-      const newOutput = data.output;
-      term.write(newOutput);
-      terminalState.lastPos = data.pos;
+    const data = await api('GET', `/servers/${serverId}/console?since=${terminalState.since}`);
+    if (data.output) {
+      term.write(data.output);
+      terminalState.since = data.total || terminalState.since;
     }
     if (!data.running) {
       setTermStatus('Server stopped', '');
     }
   } catch (e) {
-    // ignore poll errors
+    // ignore
   }
 }
 

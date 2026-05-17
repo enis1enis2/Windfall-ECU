@@ -9,7 +9,7 @@ from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server
 from server_manager import (ServerProcess, get_server_process, register_server,
-                            unregister_server, get_server_path, get_console_output, clean_output)
+                            unregister_server, get_server_path, clean_output)
 from terminal_handler import setup_terminal_handlers
 from backup_manager import list_backups, create_backup, restore_backup, delete_backup
 from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
@@ -266,20 +266,26 @@ def api_console(server_id):
         abort(404)
     proc = get_server_process(server_id)
     running = bool(proc and proc.is_running)
+
+    since = request.args.get('since', 0, type=int)
     output = ''
-    pos = 0
+    total = 0
+
     if proc:
-        output, pos = get_console_output(server_id)
-    if not output:
+        output, total = proc.buffer.get_since(since)
+    else:
         log_file = os.path.join(server['path'], 'logs', 'latest.log')
         if os.path.isfile(log_file):
             try:
                 with open(log_file, 'r', errors='replace') as f:
-                    output = clean_output(f.read())
-                    pos = len(output)
+                    text = clean_output(f.read())
+                    lines = text.splitlines(True)
+                    total = len(lines)
+                    output = ''.join(lines[since:])
             except (OSError, PermissionError):
                 pass
-    return jsonify({'output': output, 'pos': pos, 'running': running})
+
+    return jsonify({'output': output, 'total': total, 'running': running})
 
 
 @app.route('/api/system/docker', methods=['GET'])
