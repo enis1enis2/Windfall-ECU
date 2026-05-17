@@ -1,3 +1,4 @@
+import re
 import subprocess
 import os
 import signal
@@ -5,6 +6,14 @@ import threading
 import time
 from collections import deque
 from config import JAVA_BIN, SERVERS_DIR
+
+ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
+MC_COLOR_RE = re.compile(r'§[0-9a-fklmnor]')
+
+def clean_output(text):
+    text = ANSI_RE.sub('', text)
+    text = MC_COLOR_RE.sub('', text)
+    return text
 
 
 class ConsoleBuffer:
@@ -83,7 +92,7 @@ class ServerProcess:
                 line = self.process.stdout.readline()
                 if not line:
                     break
-                text = line.decode('utf-8', errors='replace')
+                text = clean_output(line.decode('utf-8', errors='replace'))
                 self.buffer.append(text)
                 if self.output_callback:
                     self.output_callback(text)
@@ -99,9 +108,7 @@ class ServerProcess:
                     with open(log_file, 'r', errors='replace') as f:
                         f.seek(self.log_pos)
                         for line in f:
-                            self.buffer.append(line)
-                            if self.output_callback:
-                                self.output_callback(line)
+                            self.buffer.append(clean_output(line))
                         self.log_pos = f.tell()
                 except (OSError, PermissionError):
                     pass

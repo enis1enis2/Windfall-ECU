@@ -9,7 +9,7 @@ from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server
 from server_manager import (ServerProcess, get_server_process, register_server,
-                            unregister_server, get_server_path, get_console_output)
+                            unregister_server, get_server_path, get_console_output, clean_output)
 from terminal_handler import setup_terminal_handlers
 from backup_manager import list_backups, create_backup, restore_backup, delete_backup
 from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
@@ -275,7 +275,7 @@ def api_console(server_id):
         if os.path.isfile(log_file):
             try:
                 with open(log_file, 'r', errors='replace') as f:
-                    output = f.read()
+                    output = clean_output(f.read())
                     pos = len(output)
             except (OSError, PermissionError):
                 pass
