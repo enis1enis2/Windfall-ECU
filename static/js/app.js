@@ -76,6 +76,7 @@ function selectServer(id) {
   loadTerminal(id);
   loadBackups(id);
   loadFiles(id);
+  loadPlugins(id);
 }
 
 async function createServer() {
@@ -141,6 +142,7 @@ document.querySelectorAll('.tab').forEach(el => {
     if (tab === 'terminal' && activeServerId) loadTerminal(activeServerId);
     if (tab === 'files' && activeServerId) loadFiles(activeServerId);
     if (tab === 'backups' && activeServerId) loadBackups(activeServerId);
+    if (tab === 'plugins' && activeServerId) loadPlugins(activeServerId);
   });
 });
 

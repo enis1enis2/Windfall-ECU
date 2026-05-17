@@ -13,6 +13,7 @@ from file_explorer import list_files, read_file, write_file, delete_entry, creat
 from zip_importer import import_zip
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
+from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -330,6 +331,59 @@ def api_download():
         return jsonify({'id': server_id, 'status': 'downloaded'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/plugins/search', methods=['GET'])
+def api_plugins_search():
+    q = request.args.get('q', '')
+    provider = request.args.get('provider')
+    if len(q) < 2:
+        return jsonify([])
+    try:
+        results = search_plugins(q, provider)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
+def api_plugin_versions(provider, project_id):
+    try:
+        versions = plugin_get_versions(provider, project_id)
+        return jsonify(versions)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/plugins/install', methods=['POST'])
+def api_plugin_install():
+    data = request.json
+    server_id = data.get('server_id')
+    provider = data.get('provider')
+    project_id = data.get('project_id')
+    version_id = data.get('version_id')
+    version_number = data.get('version_number')
+
+    if not all([server_id, provider, project_id]):
+        return jsonify({'error': 'server_id, provider, project_id required'}), 400
+
+    ok, msg = install_plugin(server_id, provider, project_id, version_id, version_number)
+    if ok:
+        return jsonify({'status': msg})
+    return jsonify({'error': msg}), 400
+
+
+@app.route('/api/servers/<int:server_id>/plugins', methods=['GET'])
+def api_plugins_list(server_id):
+    return jsonify(list_installed(server_id))
+
+
+@app.route('/api/servers/<int:server_id>/plugins/<filename>', methods=['DELETE'])
+def api_plugin_delete(server_id, filename):
+    ok, msg = delete_plugin(server_id, filename)
+    if ok:
+        return jsonify({'status': msg})
+    return jsonify({'error': msg}), 400
 
 
 if __name__ == '__main__':
