@@ -22,7 +22,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
 
-socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins=os.environ.get('GREATPANEL_ORIGIN', 'http://localhost:8080'), async_mode='eventlet')
 
 os.makedirs(SERVERS_DIR, exist_ok=True)
 os.makedirs(BACKUPS_DIR, exist_ok=True)
@@ -122,6 +122,28 @@ def api_server_stop(server_id):
     proc.stop()
     unregister_server(server_id)
     return jsonify({'status': 'stopped'})
+
+
+@app.route('/api/servers/<int:server_id>/restart', methods=['POST'])
+def api_server_restart(server_id):
+    server = get_server(server_id)
+    if not server:
+        abort(404)
+    proc = get_server_process(server_id)
+    if proc:
+        proc.stop()
+        unregister_server(server_id)
+        eventlet.sleep(1)
+    jar_path = os.path.join(server['path'], server['jar_file']) if server['jar_file'] else None
+    if not jar_path or not os.path.isfile(jar_path):
+        return jsonify({'error': f'JAR file not found: {jar_path}'}), 400
+    proc = ServerProcess(server_id, server['path'], server['jar_file'], server['java_args'])
+    ok = proc.start()
+    if ok:
+        register_server(server_id, proc)
+        return jsonify({'status': 'restarted', 'pid': proc.process.pid if proc.process else None})
+    else:
+        return jsonify({'error': 'Failed to restart server'}), 500
 
 
 @app.route('/api/servers/<int:server_id>/status', methods=['GET'])
@@ -256,7 +278,9 @@ def api_import_zip():
     server_id, error = import_zip(file, server_name)
     if error:
         return jsonify({'error': error}), 400
-    return jsonify({'id': server_id, 'status': 'imported'}), 201
+    from models import get_server
+    srv = get_server(server_id)
+    return jsonify({'id': server_id, 'name': srv['name'] if srv else server_name, 'status': 'imported'}), 201
 
 
 @app.route('/api/servers/<int:server_id>/console', methods=['GET'])
@@ -274,10 +298,16 @@ def api_console(server_id):
     if proc:
         output, total = proc.buffer.get_since(since)
     else:
+        MAX_CONSOLE_BYTES = 5 * 1024 * 1024
         log_file = os.path.join(server['path'], 'logs', 'latest.log')
         if os.path.isfile(log_file):
             try:
+                file_size = os.path.getsize(log_file)
+                read_size = min(file_size, MAX_CONSOLE_BYTES)
                 with open(log_file, 'r', errors='replace') as f:
+                    if file_size > MAX_CONSOLE_BYTES:
+                        f.seek(file_size - MAX_CONSOLE_BYTES)
+                        f.readline()
                     text = clean_output(f.read())
                     lines = text.splitlines(True)
                     total = len(lines)
@@ -363,6 +393,42 @@ def api_download():
         return jsonify({'id': server_id, 'status': 'downloaded'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/servers/<int:server_id>/upgrade', methods=['POST'])
+def api_server_upgrade(server_id):
+    server = get_server(server_id)
+    if not server:
+        abort(404)
+    proc = get_server_process(server_id)
+    if proc and proc.is_running:
+        return jsonify({'error': 'Stop the server before upgrading'}), 400
+    server_type = server['server_type']
+    from server_downloader import download_server
+    versions = get_versions(server_type)
+    if not versions:
+        return jsonify({'error': f'No versions found for {server_type}'}), 400
+    latest_ver = versions[-1] if isinstance(versions, list) else versions[0]
+    build = None
+    if server_type in ('paper', 'folia', 'purpur'):
+        builds = get_builds(server_type, latest_ver)
+        if builds:
+            build = builds[-1]
+    name = server['name']
+    import shutil
+    backup_path = os.path.join(server['path'], 'server.jar.backup')
+    old_jar = os.path.join(server['path'], server['jar_file'])
+    if os.path.isfile(old_jar):
+        shutil.copy2(old_jar, backup_path)
+    new_id, error = download_server(server_type, latest_ver, build, name)
+    if error:
+        if os.path.isfile(backup_path):
+            shutil.copy2(backup_path, old_jar)
+            os.remove(backup_path)
+        return jsonify({'error': error}), 400
+    if os.path.isfile(backup_path):
+        os.remove(backup_path)
+    return jsonify({'id': new_id, 'version': latest_ver, 'build': build, 'status': 'upgraded'})
 
 
 @app.route('/api/plugins/search', methods=['GET'])

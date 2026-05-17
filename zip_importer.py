@@ -29,12 +29,30 @@ def import_zip(file_storage, server_name=None):
             shutil.rmtree(tmp_dir)
             return None, 'No .jar file found in the zip archive'
 
-        jar_candidates = [j for j in jar_files if 'server' in j.lower() or 'paper' in j.lower() or 'purpur' in j.lower() or 'spigot' in j.lower() or 'vanilla' in j.lower()]
+        jar_candidates = [j for j in jar_files if any(kw in j.lower() for kw in ['server', 'paper', 'purpur', 'spigot', 'vanilla', 'fabric', 'quilt', 'forge', 'neoforge', 'minecraft_server'])]
 
         if jar_candidates:
             jar_file = jar_candidates[0]
         else:
             jar_file = jar_files[0]
+
+        jar_lower = jar_file.lower()
+        if 'paper' in jar_lower:
+            detected_type = 'paper'
+        elif 'folia' in jar_lower:
+            detected_type = 'folia'
+        elif 'purpur' in jar_lower:
+            detected_type = 'purpur'
+        elif 'fabric' in jar_lower:
+            detected_type = 'fabric'
+        elif 'quilt' in jar_lower:
+            detected_type = 'quilt'
+        elif 'forge' in jar_lower:
+            detected_type = 'forge'
+        elif 'neoforge' in jar_lower:
+            detected_type = 'neoforge'
+        else:
+            detected_type = 'vanilla'
 
         if not server_name:
             base = os.path.basename(jar_file).replace('.jar', '')
@@ -49,13 +67,18 @@ def import_zip(file_storage, server_name=None):
 
         shutil.copytree(extract_dir, server_path)
 
+        eula_path = os.path.join(server_path, 'eula.txt')
+        if not os.path.isfile(eula_path):
+            with open(eula_path, 'w') as f:
+                f.write('eula=true\n')
+
         jar_rel_path = jar_file
 
         server_id = create_server(
             name=server_name,
             path=server_path,
             jar_file=jar_rel_path,
-            server_type='vanilla'
+            server_type=detected_type
         )
 
         shutil.rmtree(tmp_dir)

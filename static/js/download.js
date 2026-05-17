@@ -121,44 +121,20 @@ async function downloadServer() {
   }
 }
 
-async function openSettings(serverId) {
-  const overlay = document.getElementById('settings-modal');
-  const nameEl = document.getElementById('settings-name');
-  const argsEl = document.getElementById('settings-args');
-  const typeEl = document.getElementById('settings-type');
-
-  overlay.classList.remove('hidden');
-
+async function upgradeServer(serverId) {
+  if (!confirm('Upgrade this server to the latest version? The old JAR will be backed up.')) return;
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Upgrading...';
   try {
-    const server = await api('GET', `/servers/${serverId}`);
-    nameEl.value = server.name || '';
-    argsEl.value = server.java_args || '-Xmx1G -Xms1G';
-    typeEl.value = server.server_type || 'vanilla';
+    const result = await api('POST', `/servers/${serverId}/upgrade`);
+    notify(`Server upgraded to ${result.version}${result.build ? ' (build ' + result.build + ')' : ''}`, 'success');
+    await loadServers();
   } catch (e) {
-    notify('Failed to load server settings', 'error');
+    notify(`Upgrade failed: ${e.message}`, 'error');
   }
-}
-
-function closeSettings() {
-  document.getElementById('settings-modal').classList.add('hidden');
-}
-
-async function saveSettings() {
-  const serverId = activeServerId;
-  if (!serverId) return;
-
-  const javaArgs = document.getElementById('settings-args').value.trim() || '-Xmx1G -Xms1G';
-
-  try {
-    await api('PUT', `/servers/${serverId}/java_args`, { java_args: javaArgs });
-    notify('Launch arguments updated', 'success');
-    closeSettings();
-
-    const server = servers.find(s => s.id === serverId);
-    if (server) server.java_args = javaArgs;
-  } catch (e) {
-    notify(e.message, 'error');
-  }
+  btn.disabled = false;
+  btn.textContent = 'Upgrade';
 }
 
 document.addEventListener('DOMContentLoaded', () => {

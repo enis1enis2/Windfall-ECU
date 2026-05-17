@@ -1,93 +1,91 @@
 # GreatPanel
 
-A lightweight Minecraft server management panel for arm64 Linux. Manage servers through a web UI.
+A self-hosted web-based Minecraft server management panel. Start, stop, configure, back up, and update Minecraft servers entirely from your browser.
+
+## Features
+
+- **Server Lifecycle** — Start, stop, restart, and delete servers with a single click
+- **Web Terminal** — Live server console via WebSocket + xterm.js with polling fallback
+- **File Manager** — Browse, edit, upload, and delete server files
+- **Backup System** — Create, restore, and delete `.tar.gz` backups
+- **Plugin Manager** — Search and install plugins from Modrinth and Hangar
+- **Server Downloader** — Download Paper, Folia, Purpur, Vanilla, Fabric, Quilt, Forge, and NeoForge
+- **Auto-Upgrade** — Upgrade server JARs to the latest version with automatic backup
+- **ZIP Import** — Import existing server directories via drag-and-drop ZIP upload
+- **Server Properties Editor** — Edit `server.properties` directly from the UI
+- **Dark/Light Theme** — Toggle between dark and light mode (persisted in localStorage)
+- **Docker Support** — Run servers in isolated Docker containers
+- **EULA Auto-Create** — `eula=true` written automatically on server creation
+- **Launch Arguments** — Customize JVM arguments per server
 
 ## Quick Start
 
-### Without Docker
-
 ```bash
-python -m venv .venv
-source .venv/bin/activate     # Linux/Mac
-.venv\Scripts\activate         # Windows
 pip install -r requirements.txt
 python app.py
 ```
 
-Open http://localhost:8080
+Open http://localhost:8080 in your browser.
 
-### With Docker
+### Configuration via Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GREATPANEL_SECRET` | `greatpanel-secret-change-me` | Flask secret key for sessions |
+| `GREATPANEL_HOST` | `0.0.0.0` | Web server bind address |
+| `GREATPANEL_PORT` | `8080` | Web server port |
+| `GREATPANEL_JAVA` | `java` | Java binary path |
+| `GREATPANEL_ORIGIN` | `http://localhost:8080` | CORS allowed origin |
+
+### Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
-
-Open http://localhost:8080
-
-## Features
-
-### Server Management
-- **Create** — Download server jars directly for Paper, Folia, Purpur, Vanilla, Fabric, Quilt, Forge, NeoForge
-- **Import ZIP** — Upload existing server directories
-- **Start/Stop** — One-click controls per server
-- **Terminal** — Live console via WebSocket + REST polling, ANSI/Minecraft color stripped
-- **Launch Arguments** — Editable JVM args per server
-- **Files** — Browse, edit, upload, and delete server files
-- **Backups** — Create and restore world snapshots
-
-### Server Downloader
-- Supports **Paper**, **Folia**, **Purpur**, **Vanilla**, **Fabric**, **Quilt**, **Forge**, **NeoForge**
-- Versions fetched from official APIs (PaperMC, PurpurMC, Mojang, FabricMC, QuiltMC, NeoForged Maven, Forge)
-- Build selection for Paper, Folia, Purpur
-- Latest build auto-selected when none chosen
-
-### Plugin Downloader
-- Search **Modrinth** and **Hangar** simultaneously
-- Results filtered by server type (Bukkit/Paper/Purpur/Spigot for Paper-family, Fabric, Quilt, NeoForge, Forge)
-- Plugin install downloads directly to the server's `plugins/` directory
-- Installed plugin listing with delete support
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/servers` | List servers |
-| POST | `/api/servers` | Create server |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/servers` | List all servers |
+| POST | `/api/servers` | Create a server |
 | GET | `/api/servers/:id` | Get server details |
-| DELETE | `/api/servers/:id` | Delete server |
+| DELETE | `/api/servers/:id` | Delete server and files |
 | POST | `/api/servers/:id/start` | Start server |
 | POST | `/api/servers/:id/stop` | Stop server |
-| GET | `/api/servers/:id/status` | Server status |
-| GET | `/api/servers/:id/console` | Terminal output (since=N) |
-| POST | `/api/servers/:id/console` | Send command |
-| PUT | `/api/servers/:id/java_args` | Update JVM args |
-| GET | `/api/servers/:id/files` | List files |
-| POST | `/api/servers/:id/files/write` | Save file |
-| POST | `/api/servers/:id/files/delete` | Delete file |
+| POST | `/api/servers/:id/restart` | Restart server |
+| POST | `/api/servers/:id/upgrade` | Upgrade server JAR to latest version |
+| GET | `/api/servers/:id/status` | Server running status |
+| PUT | `/api/servers/:id/java_args` | Update JVM launch arguments |
+| GET | `/api/servers/:id/console?since=N` | Get console output since line N |
+| GET | `/api/servers/:id/files` | List server files |
+| GET | `/api/servers/:id/files/read` | Read file content |
+| POST | `/api/servers/:id/files/write` | Write file |
+| POST | `/api/servers/:id/files/delete` | Delete file or directory |
+| POST | `/api/servers/:id/files/mkdir` | Create directory |
 | POST | `/api/servers/:id/files/upload` | Upload files |
+| GET | `/api/servers/:id/files/download` | Download a file |
 | GET | `/api/servers/:id/backups` | List backups |
 | POST | `/api/servers/:id/backups` | Create backup |
 | POST | `/api/backups/:id/restore` | Restore backup |
-| GET | `/api/download/types` | List server types |
-| GET | `/api/download/versions/:type` | List versions |
-| GET | `/api/download/builds/:type/:version` | List builds |
-| POST | `/api/download` | Download & create server |
-| GET | `/api/plugins/search` | Search plugins (?q=&server_type=) |
-| GET | `/api/plugins/versions/:provider/:id` | List plugin versions |
+| DELETE | `/api/backups/:id` | Delete backup |
+| GET | `/api/download/types` | List server download types |
+| GET | `/api/download/versions/:type` | List versions for type |
+| GET | `/api/download/builds/:type/:version` | List builds for version |
+| POST | `/api/download` | Download and create server |
+| GET | `/api/plugins/search` | Search plugins |
 | POST | `/api/plugins/install` | Install plugin |
 | GET | `/api/servers/:id/plugins` | List installed plugins |
 | DELETE | `/api/servers/:id/plugins/:file` | Delete plugin |
-| POST | `/api/import/zip` | Import server ZIP |
+| POST | `/api/import/zip` | Import server from ZIP |
+| GET | `/api/system/docker` | Check Docker availability |
 
 ## Stack
 
-- **Backend:** Python, Flask, Flask-SocketIO, eventlet
-- **Frontend:** Vanilla JS, xterm.js, Socket.IO client
-- **Storage:** SQLite (servers, backups, settings)
-- **Protocol:** REST API + WebSocket for terminal I/O
+- **Backend**: Flask, Flask-SocketIO, SQLite, Eventlet
+- **Frontend**: Vanilla JavaScript, xterm.js, Socket.IO client
+- **Container**: Docker / Docker Compose
 
-## Requirements
+## License
 
-- Python 3.10+
-- Java 17+ (to run Minecraft servers)
-- Works on arm64 (Raspberry Pi, Oracle ARM, Apple Silicon) and x86_64
+MIT

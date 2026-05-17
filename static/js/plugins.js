@@ -129,7 +129,7 @@ function renderSearchResults(results) {
         <span>v${escapeHtml(p.latest_version)}</span>
       </div>
       <div class="plugin-card-actions">
-        <button class="btn btn-success btn-sm" onclick="showInstallDialog('${p.provider}', '${p.id}', '${escapeHtml(p.name)}', ${activeServerId})">Install</button>
+        <button class="btn btn-success btn-sm" onclick="showInstallDialog('${escapeHtml(p.provider)}', '${escapeHtml(p.id)}', '${escapeHtml(p.name)}', ${activeServerId})">Install</button>
         <a href="${escapeHtml(p.project_url)}" target="_blank" class="btn btn-secondary btn-sm">View</a>
       </div>
     `;

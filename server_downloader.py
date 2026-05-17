@@ -149,21 +149,21 @@ def get_builds(server_type, version):
 
 def download_server(server_type, version, build=None, server_name=None):
     if server_type == 'paper':
-        return _download_paper('paper', version, build, server_name)
+        return _download_paper('paper', version, build, server_name, server_type)
     if server_type == 'folia':
-        return _download_paper('folia', version, build, server_name)
+        return _download_paper('folia', version, build, server_name, server_type)
     if server_type == 'purpur':
-        return _download_purpur(version, build, server_name)
+        return _download_purpur(version, build, server_name, server_type)
     if server_type == 'vanilla':
-        return _download_vanilla(version, server_name)
+        return _download_vanilla(version, server_name, server_type)
     if server_type == 'fabric':
-        return _download_fabric(version, server_name)
+        return _download_fabric(version, server_name, server_type)
     if server_type == 'quilt':
-        return _download_quilt(version, server_name)
+        return _download_quilt(version, server_name, server_type)
     if server_type == 'forge':
-        return _download_forge(version, server_name)
+        return _download_forge(version, server_name, server_type)
     if server_type == 'neoforge':
-        return _download_neoforge(version, server_name)
+        return _download_neoforge(version, server_name, server_type)
     return None, 'Unknown server type'
 
 
@@ -192,7 +192,7 @@ def _paper_download_url(project, version, build, jar_name):
     return f'https://api.papermc.io/v2/projects/{project}/versions/{version}/builds/{build}/downloads/{jar_name}'
 
 
-def _download_paper(project, version, build, server_name):
+def _download_paper(project, version, build, server_name, server_type=None):
     if build is None:
         unlisted = _PAPER_UNLISTED if project == 'paper' else _FOLIA_UNLISTED
         if version in unlisted:
@@ -211,10 +211,10 @@ def _download_paper(project, version, build, server_name):
     jar_name = f'{project}-{version}-{build}.jar'
     url = _paper_download_url(project, version, build, jar_name)
 
-    return _download_and_create_server(url, jar_name, version, server_name or f'{project.title()} {version}')
+    return _download_and_create_server(url, jar_name, version, server_name or f'{project.title()} {version}', server_type or project)
 
 
-def _download_purpur(version, build, server_name):
+def _download_purpur(version, build, server_name, server_type='purpur'):
     if build is None:
         data = fetch_json(f'{PURPUR_API}/{version}')
         if not isinstance(data, dict):
@@ -227,10 +227,10 @@ def _download_purpur(version, build, server_name):
 
     url = f'{PURPUR_API}/{version}/{build}/download'
     jar_name = f'purpur-{version}-{build}.jar'
-    return _download_and_create_server(url, jar_name, version, server_name or f'Purpur {version}')
+    return _download_and_create_server(url, jar_name, version, server_name or f'Purpur {version}', server_type)
 
 
-def _download_vanilla(version, server_name):
+def _download_vanilla(version, server_name, server_type='vanilla'):
     data = fetch_json(VANILLA_MANIFEST)
     target = None
     for v in data.get('versions', []):
@@ -245,7 +245,7 @@ def _download_vanilla(version, server_name):
     if not jar_url:
         return None, 'No server download URL found'
 
-    return _download_and_create_server(jar_url, f'server.jar', version, server_name or f'Vanilla {version}')
+    return _download_and_create_server(jar_url, f'server.jar', version, server_name or f'Vanilla {version}', server_type)
 
 
 def _get_loader_version(meta_url):
@@ -259,22 +259,22 @@ def _get_loader_version(meta_url):
     return entry.get('version')
 
 
-def _download_fabric(version, server_name):
+def _download_fabric(version, server_name, server_type='fabric'):
     loader_version = _get_loader_version(f'{FABRIC_META}/loader')
     if not loader_version:
         return None, 'Could not find Fabric loader version'
     url = f'{FABRIC_META}/loader/{version}/{loader_version}/server/json'
     return _download_fabric_quilt_jar(url, f'fabric-server-mc.{version}-loader.{loader_version}.jar',
-                                      version, server_name or f'Fabric {version}')
+                                      version, server_name or f'Fabric {version}', server_type)
 
 
-def _download_quilt(version, server_name):
+def _download_quilt(version, server_name, server_type='quilt'):
     loader_version = _get_loader_version(f'{QUILT_META}/loader')
     if not loader_version:
         return None, 'Could not find Quilt loader version'
     url = f'{QUILT_META}/loader/{version}/{loader_version}/server/json'
     return _download_fabric_quilt_jar(url, f'quilt-server-mc.{version}-loader.{loader_version}.jar',
-                                      version, server_name or f'Quilt {version}')
+                                      version, server_name or f'Quilt {version}', server_type)
 
 
 def _maven_url(base_url, coord):
@@ -286,7 +286,7 @@ def _maven_url(base_url, coord):
     return None
 
 
-def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
+def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name, server_type='fabric'):
     meta = fetch_json(meta_url)
     if not isinstance(meta, dict):
         return None, 'Invalid meta response'
@@ -321,7 +321,7 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
 
         libs_dir = os.path.join(tmp, 'libraries')
         os.makedirs(libs_dir, exist_ok=True)
-        for lib in meta.get('libraries', [])[:20]:
+        for lib in meta.get('libraries', []):
             try:
                 if 'url' in lib and 'name' in lib:
                     lib_url = _maven_url(lib['url'], lib['name'])
@@ -343,9 +343,14 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
         shutil.copytree(tmp, server_path)
         shutil.rmtree(tmp)
 
+        eula_path = os.path.join(server_path, 'eula.txt')
+        if not os.path.isfile(eula_path):
+            with open(eula_path, 'w') as f:
+                f.write('eula=true\n')
+
         from models import create_server
         server_id = create_server(name=server_name, path=server_path, jar_file=jar_name,
-                                  java_args='-Xmx2G -Xms1G', server_type='fabric' if 'fabric' in server_name.lower() else 'quilt')
+                                  java_args='-Xmx2G -Xms1G', server_type=server_type)
         return server_id, None
 
     except Exception as e:
@@ -353,19 +358,36 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
         return None, str(e)
 
 
-def _download_forge(version, server_name):
-    url = f'https://maven.minecraftforge.net/net/minecraftforge/forge/{version}/forge-{version}-installer.jar'
-    jar_name = f'forge-{version}-installer.jar'
-    return _download_and_create_server(url, jar_name, version, server_name or f'Forge {version}')
+def _latest_forge_version(mc_version):
+    try:
+        import xml.etree.ElementTree as ET
+        r = requests.get('https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml', timeout=TIMEOUT)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        candidates = [v.text for v in root.findall('.//version') if v.text and v.text.startswith(mc_version + '-')]
+        if candidates:
+            return sorted(candidates, key=lambda v: [int(x) if x.isdigit() else x for x in v.split('.')], reverse=True)[0]
+    except Exception:
+        pass
+    return None
 
 
-def _download_neoforge(version, server_name):
+def _download_forge(version, server_name, server_type='forge'):
+    full_ver = _latest_forge_version(version)
+    if not full_ver:
+        return None, f'No Forge build found for MC {version}'
+    url = f'https://maven.minecraftforge.net/net/minecraftforge/forge/{full_ver}/forge-{full_ver}-server.jar'
+    jar_name = f'forge-{full_ver}-server.jar'
+    return _download_and_create_server(url, jar_name, version, server_name or f'Forge {version}', server_type)
+
+
+def _download_neoforge(version, server_name, server_type='neoforge'):
     url = f'https://maven.neoforged.net/releases/net/neoforged/neoforge/{version}/neoforge-{version}-installer.jar'
     jar_name = f'neoforge-{version}-installer.jar'
-    return _download_and_create_server(url, jar_name, version, server_name or f'NeoForge {version}')
+    return _download_and_create_server(url, jar_name, version, server_name or f'NeoForge {version}', server_type)
 
 
-def _download_and_create_server(jar_url, jar_name, version, server_name):
+def _download_and_create_server(jar_url, jar_name, version, server_name, server_type='vanilla'):
     tmp = os.path.join(SERVERS_DIR, f'_dl_{version.replace(".", "_")}')
     os.makedirs(tmp, exist_ok=True)
 
@@ -386,9 +408,14 @@ def _download_and_create_server(jar_url, jar_name, version, server_name):
         shutil.copytree(tmp, server_path)
         shutil.rmtree(tmp)
 
+        eula_path = os.path.join(server_path, 'eula.txt')
+        if not os.path.isfile(eula_path):
+            with open(eula_path, 'w') as f:
+                f.write('eula=true\n')
+
         from models import create_server
         server_id = create_server(name=server_name, path=server_path, jar_file=jar_name,
-                                  java_args='-Xmx2G -Xms1G', server_type=server_name.lower().split()[0])
+                                  java_args='-Xmx2G -Xms1G', server_type=server_type)
         return server_id, None
 
     except Exception as e:

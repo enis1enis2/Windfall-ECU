@@ -4,6 +4,7 @@ import os
 import signal
 import threading
 import time
+import shlex
 from collections import deque
 from config import JAVA_BIN, SERVERS_DIR
 
@@ -61,12 +62,11 @@ class ServerProcess:
         os.makedirs(self.workdir, exist_ok=True)
         os.makedirs(os.path.join(self.workdir, 'logs'), exist_ok=True)
 
-        java_opts = '-Dlog4j.configurationFile=log4j2.xml -Dconsole.encoding=UTF-8'
-        cmd = f'{JAVA_BIN} {java_opts} {self.java_args} -jar {self.jar_file} nogui'
+        java_opts = ['-Dlog4j.configurationFile=log4j2.xml', '-Dconsole.encoding=UTF-8']
+        cmd = [JAVA_BIN] + java_opts + shlex.split(self.java_args) + ['-jar', self.jar_file, 'nogui']
 
         self.process = subprocess.Popen(
             cmd,
-            shell=True,
             cwd=self.workdir,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

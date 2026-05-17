@@ -51,6 +51,11 @@ def restore_backup(backup_id):
     if not server:
         return False, 'Server not found'
 
+    from server_manager import get_server_process
+    proc = get_server_process(backup['server_id'])
+    if proc and proc.is_running:
+        return False, 'Stop the server before restoring a backup'
+
     backup_path = backup['path']
     if not os.path.isfile(backup_path):
         return False, 'Backup file not found'
@@ -65,26 +70,37 @@ def restore_backup(backup_id):
         with tarfile.open(backup_path, 'r:gz') as tar:
             tar.extractall(temp_dir)
 
-        extracted_dirs = os.listdir(temp_dir)
-        if extracted_dirs:
-            extracted = os.path.join(temp_dir, extracted_dirs[0])
+        extracted_items = []
+        for root, dirs, files in os.walk(temp_dir):
+            for f in files:
+                rel = os.path.relpath(os.path.join(root, f), temp_dir)
+                extracted_items.append(rel)
+            for d in dirs:
+                rel = os.path.relpath(os.path.join(root, d), temp_dir)
+                extracted_items.append(rel)
+            break
 
-            for item in os.listdir(server_path):
-                item_path = os.path.join(server_path, item)
-                if os.path.isfile(item_path) and item == 'session.lock':
-                    continue
-                if os.path.isdir(item_path):
-                    shutil.rmtree(item_path)
-                else:
-                    os.remove(item_path)
+        if not extracted_items:
+            shutil.rmtree(temp_dir)
+            return False, 'Backup is empty'
 
-            for item in os.listdir(extracted):
-                s = os.path.join(extracted, item)
-                d = os.path.join(server_path, item)
-                if os.path.isdir(s):
-                    shutil.copytree(s, d, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(s, d)
+        for item in os.listdir(server_path):
+            item_path = os.path.join(server_path, item)
+            if os.path.isfile(item_path) and item == 'session.lock':
+                continue
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+            else:
+                os.remove(item_path)
+
+        for item in extracted_items:
+            s = os.path.join(temp_dir, item)
+            d = os.path.join(server_path, item)
+            if os.path.isdir(s):
+                shutil.copytree(s, d, dirs_exist_ok=True)
+            else:
+                os.makedirs(os.path.dirname(d), exist_ok=True)
+                shutil.copy2(s, d)
 
         shutil.rmtree(temp_dir)
         return True, 'Backup restored successfully'

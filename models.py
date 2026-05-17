@@ -62,12 +62,16 @@ def delete_server(server_id):
     conn.commit()
     conn.close()
 
+ALLOWED_COLUMNS = {'name', 'path', 'jar_file', 'java_args', 'server_type', 'auto_start', 'docker_mode'}
+
 def update_server(server_id, **kwargs):
     if not kwargs:
         return
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
     for key, value in kwargs.items():
+        if key not in ALLOWED_COLUMNS:
+            continue
         c.execute(f'UPDATE servers SET {key} = ? WHERE id = ?', (value, server_id))
     conn.commit()
     conn.close()

@@ -28,10 +28,13 @@ def create_docker_container(server_id, server_name, server_path, jar_file, java_
     safe_name = ''.join(c if c.isalnum() or c in '_-' else '_' for c in server_name)
     container_name = f'greatpanel_{server_id}_{safe_name}'
 
+    import shlex
+    cmd_parts = ['java'] + shlex.split(java_args) + ['-jar', jar_file, 'nogui']
+    cmd_json = json.dumps(cmd_parts)
     dockerfile = f'''FROM openjdk:21-slim AS mc-server
 WORKDIR /server
 COPY . /server/
-CMD ["java", "{java_args}", "-jar", "{jar_file}", "nogui"]
+CMD {cmd_json}
 '''
 
     dockerfile_path = os.path.join(server_path, 'Dockerfile')

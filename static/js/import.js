@@ -12,7 +12,7 @@ async function handleImportZip(event) {
 
   try {
     const result = await api('POST', '/import/zip', form);
-    notify(`Server "${result.id}" imported successfully!`, 'success');
+    notify(`Server "${result.name}" imported successfully!`, 'success');
     await loadServers();
     selectServer(result.id);
     zone.classList.remove('has-file');

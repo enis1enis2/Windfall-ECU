@@ -1,4 +1,4 @@
-let terminalState = { socket: null, term: null, pollTimer: null, since: 0, serverId: null };
+let terminalState = { socket: null, term: null, pollTimer: null, since: 0, serverId: null, wsConnected: false };
 
 async function loadTerminal(serverId) {
   cleanupTerminal();
@@ -39,14 +39,19 @@ async function loadTerminal(serverId) {
   term.open(document.getElementById('xterm-container'));
   terminalState.term = term;
 
-  // Load existing output via REST
+  term.onData(data => {
+    sendCommand(serverId, data);
+  });
+
   await fetchConsole(serverId, term);
 
-  // WebSocket for live updates
   tryConnectSocket(serverId, term);
+}
 
-  // Polling fallback — every 1.5s get only new lines
-  terminalState.pollTimer = setInterval(() => pollConsole(serverId, term), 1500);
+function sendCommand(serverId, data) {
+  if (terminalState.socket && terminalState.socket.connected) {
+    terminalState.socket.emit('terminal_input', { server_id: serverId, data });
+  }
 }
 
 function cleanupTerminal() {
@@ -64,6 +69,7 @@ function cleanupTerminal() {
   }
   terminalState.since = 0;
   terminalState.serverId = null;
+  terminalState.wsConnected = false;
 }
 
 async function fetchConsole(serverId, term) {
@@ -87,10 +93,14 @@ function tryConnectSocket(serverId, term) {
   });
 
   socket.on('connect_error', () => {
+    terminalState.wsConnected = false;
+    startPolling(serverId, term);
     setTermStatus('Polling (no WebSocket)', 'polling');
   });
 
   socket.on('connect', () => {
+    terminalState.wsConnected = true;
+    stopPolling();
     setTermStatus('WebSocket live', 'connected');
     socket.emit('connect_terminal', { server_id: serverId });
   });
@@ -102,6 +112,8 @@ function tryConnectSocket(serverId, term) {
   });
 
   socket.on('disconnect', () => {
+    terminalState.wsConnected = false;
+    startPolling(serverId, term);
     setTermStatus('Polling (disconnected)', 'polling');
   });
 
@@ -114,7 +126,23 @@ function tryConnectSocket(serverId, term) {
   terminalState.socket = socket;
 }
 
+function startPolling(serverId, term) {
+  if (terminalState.pollTimer) return;
+  terminalState.pollTimer = setInterval(() => pollConsole(serverId, term), 1500);
+}
+
+function stopPolling() {
+  if (terminalState.pollTimer) {
+    clearInterval(terminalState.pollTimer);
+    terminalState.pollTimer = null;
+  }
+}
+
 async function pollConsole(serverId, term) {
+  if (terminalState.wsConnected) {
+    stopPolling();
+    return;
+  }
   try {
     const data = await api('GET', `/servers/${serverId}/console?since=${terminalState.since}`);
     if (data.output) {
