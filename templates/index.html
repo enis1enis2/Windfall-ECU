@@ -26,7 +26,7 @@
         <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
         <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
         <button class="btn btn-outline btn-sm" onclick="openAutoBackupSettings()" title="Auto Backup">⏱️</button>
-        <button class="btn btn-outline btn-sm" onclick="openUserManager()" title="Users">👤</button>
+        <button class="btn btn-outline btn-sm" id="btn-users" onclick="openUserManager()" title="Users">👤</button>
         <button class="btn btn-outline btn-sm" onclick="logoutUser()" title="Logout" style="flex:0 0 auto">🚪</button>
       </div>
       <div class="sidebar-footer">
@@ -226,9 +226,12 @@
   </div>
 
   <div class="modal-overlay hidden" id="users-modal">
-    <div class="modal" style="max-width:520px">
+    <div class="modal" style="max-width:540px">
       <h3>User Manager</h3>
-      <div id="users-list" style="margin-bottom:16px"></div>
+      <div style="margin-bottom:12px;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="openCreateUser()" id="btn-create-user">+ New User</button>
+      </div>
+      <div id="users-list" style="margin-bottom:12px"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeUserManager()">Close</button>
       </div>
@@ -245,6 +248,10 @@
       <div class="form-row">
         <label>New Password</label>
         <input type="password" id="user-edit-password" placeholder="Leave blank to keep current">
+      </div>
+      <div class="form-row">
+        <label>Role</label>
+        <select id="user-edit-role"></select>
       </div>
       <input type="hidden" id="user-edit-id">
       <div class="modal-actions">

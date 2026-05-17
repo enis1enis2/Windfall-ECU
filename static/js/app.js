@@ -3,6 +3,8 @@ const API = '/api';
 let servers = [];
 let activeServerId = null;
 let activeTab = 'terminal';
+let currentUserId = null;
+let currentUserRole = 'viewer';
 
 function notify(msg, type = 'info') {
   const existing = document.querySelectorAll('.notification');
@@ -224,16 +226,20 @@ async function saveSettings() {
 }
 
 /* User Manager */
+let currentUserRole = 'admin';
+
 async function openUserManager() {
   try {
     const users = await api('GET', '/users');
     const list = document.getElementById('users-list');
     list.innerHTML = users.map(u => {
       const date = new Date(u.created_at + 'Z').toLocaleDateString();
+      const isSelf = u.username === document.querySelector('.sidebar-header .brand h1')?.textContent;
+      const badge = u.role === 'admin' ? 'Admin' : u.role === 'operator' ? 'Operator' : 'Viewer';
       return `<div class="backup-item" style="cursor:pointer" onclick="openUserEdit(${u.id})">
         <div class="info">
-          <div class="name">${escapeHtml(u.username)}</div>
-          <div class="meta">ID: ${u.id} &middot; Created: ${date}</div>
+          <div class="name">${escapeHtml(u.username)} ${u.id === currentUserId ? '<span style="font-size:11px;color:var(--text-muted)">(you)</span>' : ''}</div>
+          <div class="meta"><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;background:var(--accent-subtle);color:var(--accent)">${badge}</span> &middot; Created ${date}</div>
         </div>
         <span class="btn btn-outline btn-xs">Edit</span>
       </div>`;
@@ -248,6 +254,29 @@ function closeUserManager() {
   document.getElementById('users-modal').classList.add('hidden');
 }
 
+async function loadRoleOptions(selected) {
+  const sel = document.getElementById('user-edit-role');
+  sel.innerHTML = '';
+  for (const [key, val] of Object.entries({admin: 'Admin', operator: 'Operator', viewer: 'Viewer'})) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = val;
+    if (key === selected) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function openCreateUser() {
+  document.getElementById('user-edit-id').value = '';
+  document.getElementById('user-edit-username').value = '';
+  document.getElementById('user-edit-password').value = '';
+  document.getElementById('user-edit-title').textContent = 'Create User';
+  document.getElementById('user-delete-btn').style.display = 'none';
+  loadRoleOptions('viewer');
+  closeUserManager();
+  document.getElementById('user-edit-modal').classList.remove('hidden');
+}
+
 async function openUserEdit(userId) {
   const users = await api('GET', '/users');
   const user = users.find(u => u.id === userId);
@@ -256,22 +285,35 @@ async function openUserEdit(userId) {
   document.getElementById('user-edit-username').value = user.username;
   document.getElementById('user-edit-password').value = '';
   document.getElementById('user-edit-title').textContent = `Edit User: ${user.username}`;
+  document.getElementById('user-delete-btn').style.display = '';
+  loadRoleOptions(user.role);
   closeUserManager();
   document.getElementById('user-edit-modal').classList.remove('hidden');
 }
 
 function closeUserEdit() {
   document.getElementById('user-edit-modal').classList.add('hidden');
+  document.getElementById('user-delete-btn').style.display = '';
 }
 
 async function saveUser() {
-  const id = parseInt(document.getElementById('user-edit-id').value);
+  const id = document.getElementById('user-edit-id').value;
   const username = document.getElementById('user-edit-username').value.trim();
   const password = document.getElementById('user-edit-password').value;
-  const body = {};
+  const role = document.getElementById('user-edit-role').value;
+  const body = { role };
   if (username) body.username = username;
   if (password) body.password = password;
-  if (!Object.keys(body).length) { closeUserEdit(); return; }
+  if (!id) {
+    if (!password) { notify('Password is required for new users', 'error'); return; }
+    try {
+      await api('POST', '/users', { username, password, role });
+      notify('User created', 'success');
+      closeUserEdit();
+      openUserManager();
+    } catch (e) { notify(e.message, 'error'); }
+    return;
+  }
   try {
     await api('PATCH', `/users/${id}`, body);
     notify('User updated', 'success');
@@ -283,8 +325,9 @@ async function saveUser() {
 }
 
 async function deleteUser() {
-  const id = parseInt(document.getElementById('user-edit-id').value);
-  if (!confirm('Delete this user permanently?')) return;
+  const id = document.getElementById('user-edit-id').value;
+  const username = document.getElementById('user-edit-username').value;
+  if (!confirm(`Delete user "${username}" permanently?`)) return;
   try {
     await api('DELETE', `/users/${id}`);
     notify('User deleted', 'success');
@@ -396,8 +439,18 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+async function loadUser() {
+  try {
+    const data = await api('GET', '/auth/status');
+    if (data.authenticated) {
+      currentUserId = data.user_id;
+      currentUserRole = data.role;
+    }
+  } catch (e) { /* not authenticated */ }
+}
+
 try { loadTheme(); } catch (e) { /* theme toggle may not exist in cached html */ }
-loadServers();
+loadUser().then(() => loadServers());
 
 function logoutUser() {
   fetch('/api/auth/logout', { method: 'POST' }).then(() => {
