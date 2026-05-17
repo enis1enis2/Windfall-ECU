@@ -77,6 +77,10 @@ async function doPluginSearch() {
   try {
     let url = `/plugins/search?q=${encodeURIComponent(q)}`;
     if (provider) url += `&provider=${provider}`;
+    if (activeServerId) {
+      const server = await api('GET', `/servers/${activeServerId}`);
+      if (server.server_type) url += `&server_type=${encodeURIComponent(server.server_type)}`;
+    }
     const results = await api('GET', url);
     renderSearchResults(results);
   } catch (e) {

@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 
 MODRINTH_API = 'https://api.modrinth.com/v2'
@@ -6,12 +7,25 @@ HANGAR_API = 'https://hangar.papermc.io/api/v1'
 TIMEOUT = 30
 
 
-def _modrinth_search(query, limit=24):
+SERVER_LOADER_MAP = {
+    'paper':    ['bukkit', 'paper', 'purpur', 'spigot'],
+    'purpur':   ['bukkit', 'paper', 'purpur', 'spigot'],
+    'folia':    ['bukkit', 'paper', 'purpur', 'spigot'],
+    'fabric':   ['fabric'],
+    'quilt':    ['quilt'],
+    'neoforge': ['neoforge'],
+    'forge':    ['forge'],
+    'vanilla':  None,
+}
+
+
+def _modrinth_search(query, loaders=None, limit=24):
     params = {
         'query': query,
         'limit': limit,
-        'facets': '["project_type:plugin"]'
     }
+    if loaders:
+        params['facets'] = json.dumps([[f'categories:{l}' for l in loaders]])
     r = requests.get(f'{MODRINTH_API}/search', params=params, timeout=TIMEOUT)
     r.raise_for_status()
     data = r.json()
@@ -49,7 +63,19 @@ def _modrinth_version(project_id, version_id):
     return r.json()
 
 
-def _hangar_search(query, limit=24):
+_HANGAR_PLATFORM_MAP = {
+    'bukkit': 'BUKKIT',
+    'paper': 'PAPER',
+    'purpur': 'PURPUR',
+    'spigot': 'SPIGOT',
+    'fabric': 'FABRIC',
+    'quilt': 'QUILT',
+    'neoforge': 'NEOFORGE',
+    'forge': 'FORGE',
+}
+
+
+def _hangar_search(query, loaders=None, limit=24):
     try:
         params = {'q': query, 'limit': limit}
         r = requests.get(f'{HANGAR_API}/projects', params=params, timeout=TIMEOUT)
@@ -63,6 +89,10 @@ def _hangar_search(query, limit=24):
             platforms = hit.get('supportedPlatforms', {})
             if not isinstance(platforms, dict):
                 platforms = {}
+            if loaders:
+                expected = {_HANGAR_PLATFORM_MAP.get(l) for l in loaders if l in _HANGAR_PLATFORM_MAP}
+                if not expected & set(platforms.keys()):
+                    continue
             all_versions = set()
             for ver_list in platforms.values():
                 if isinstance(ver_list, list):
@@ -90,16 +120,19 @@ def _hangar_search(query, limit=24):
         return []
 
 
-def search_plugins(query, provider=None):
+def search_plugins(query, provider=None, server_type=None):
+    loaders = SERVER_LOADER_MAP.get(server_type) if server_type else None
+    if loaders is None and server_type:
+        return []
     results = []
     if provider in (None, 'modrinth'):
         try:
-            results.extend(_modrinth_search(query))
+            results.extend(_modrinth_search(query, loaders=loaders))
         except Exception:
             pass
     if provider in (None, 'hangar'):
         try:
-            results.extend(_hangar_search(query))
+            results.extend(_hangar_search(query, loaders=loaders))
         except Exception:
             pass
     results.sort(key=lambda p: p['downloads'], reverse=True)

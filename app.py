@@ -369,10 +369,11 @@ def api_download():
 def api_plugins_search():
     q = request.args.get('q', '')
     provider = request.args.get('provider')
+    server_type = request.args.get('server_type')
     if len(q) < 2:
         return jsonify([])
     try:
-        results = search_plugins(q, provider)
+        results = search_plugins(q, provider, server_type=server_type)
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
