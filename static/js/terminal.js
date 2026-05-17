@@ -1,11 +1,10 @@
-let socket = null;
-
 async function loadTerminal(serverId) {
   const container = document.getElementById('terminal-container');
   const server = servers.find(s => s.id === serverId);
   if (!server) return;
 
-  if (!server.status || !server.status.running) {
+  const isRunning = server.status && server.status.running;
+  if (!isRunning) {
     container.innerHTML = `
       <div class="empty-state">
         <p>Server is offline</p>
@@ -15,13 +14,6 @@ async function loadTerminal(serverId) {
   }
 
   container.innerHTML = '<div id="xterm-container" style="height:100%"></div>';
-
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-
-  socket = io();
 
   const term = new Terminal({
     cursorBlink: true,
@@ -42,23 +34,13 @@ async function loadTerminal(serverId) {
       cyan: '#39c5cf',
       white: '#b1bac4',
     },
-    rows: Math.floor(document.getElementById('terminal-container').clientHeight / 20),
-    cols: Math.floor(document.getElementById('terminal-container').clientWidth / 9),
+    rows: Math.floor(document.getElementById('terminal-container').clientHeight / 20) || 24,
+    cols: Math.floor(document.getElementById('terminal-container').clientWidth / 9) || 80,
   });
 
   term.open(document.getElementById('xterm-container'));
 
-  term.onData(data => {
-    if (socket && socket.connected) {
-      socket.emit('terminal_input', { server_id: serverId, data });
-    }
-  });
-
-  term.onResize(({ rows, cols }) => {
-    if (socket && socket.connected) {
-      socket.emit('terminal_resize', { server_id: serverId, rows, cols });
-    }
-  });
+  const socket = io();
 
   socket.on('connect', () => {
     socket.emit('connect_terminal', { server_id: serverId });
@@ -68,9 +50,12 @@ async function loadTerminal(serverId) {
     term.write(data.data);
   });
 
-  window.terminalInstance = term;
-}
+  term.onData(data => {
+    if (socket && socket.connected) {
+      socket.emit('terminal_input', { server_id: serverId, data });
+    }
+  });
 
-window.addEventListener('beforeunload', () => {
-  if (socket) socket.disconnect();
-});
+  window.terminalInstance = term;
+  window.terminalSocket = socket;
+}

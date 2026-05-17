@@ -59,10 +59,13 @@ function renderServerList() {
 }
 
 function selectServer(id) {
-  if (id === activeServerId) return;
   if (window.terminalInstance) {
     window.terminalInstance.dispose();
     window.terminalInstance = null;
+  }
+  if (window.terminalSocket) {
+    window.terminalSocket.disconnect();
+    window.terminalSocket = null;
   }
   activeServerId = id;
   renderServerList();
