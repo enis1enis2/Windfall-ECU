@@ -1,15 +1,6 @@
 # GreatPanel
 
-A lightweight Minecraft server management panel for arm64 Linux. Manage servers through a web UI — terminal, file explorer, backups, and ZIP import.
-
-## Features
-
-- **Terminal** — Real-time server console via xterm.js + WebSocket. Send commands, see logs live.
-- **File Explorer** — Browse, edit, upload, download, and delete server files in-browser.
-- **Backup System** — Create, restore, list, and delete tar.gz backups of any server.
-- **ZIP Import** — Upload a server `.zip` — auto-detects the JAR and registers it ready to run.
-- **Docker Support** — Optional Docker-based server isolation via `docker-compose`.
-- **arm64 Compatible** — Runs on Raspberry Pi, Oracle ARM, Apple Silicon, etc.
+A lightweight Minecraft server management panel for arm64 Linux. Manage servers through a web UI.
 
 ## Quick Start
 
