@@ -1,10 +1,12 @@
-from flask import request
+from flask import request, session
 from server_manager import get_server_process
 
 
 def setup_terminal_handlers(socketio):
     @socketio.on('connect_terminal')
     def handle_connect(data):
+        if 'user_id' not in session:
+            return
         server_id = data.get('server_id')
         server_proc = get_server_process(server_id)
         if server_proc:
@@ -17,6 +19,8 @@ def setup_terminal_handlers(socketio):
 
     @socketio.on('terminal_input')
     def handle_input(data):
+        if 'user_id' not in session:
+            return
         server_id = data.get('server_id')
         command = data.get('data', '')
         server_proc = get_server_process(server_id)

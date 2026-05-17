@@ -41,6 +41,12 @@ async function loadServers() {
   }
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 function renderServerList() {
   const list = document.getElementById('server-list');
   list.innerHTML = '';
@@ -53,7 +59,7 @@ function renderServerList() {
     div.className = `server-list-item${s.id === activeServerId ? ' active' : ''}`;
     div.innerHTML = `
       <span class="status-dot ${s.status && s.status.running ? 'online' : 'offline'}"></span>
-      <span class="name">${s.name}</span>
+      <span class="name">${escapeHtml(s.name)}</span>
     `;
     div.onclick = () => selectServer(s.id);
     list.appendChild(div);
@@ -283,6 +289,14 @@ document.addEventListener('visibilitychange', () => {
 
 loadTheme();
 loadServers();
+
+function logoutUser() {
+  fetch('/api/auth/logout', { method: 'POST' }).then(() => {
+    window.location.href = '/';
+  }).catch(() => {
+    window.location.href = '/';
+  });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const zone = document.getElementById('import-zone');

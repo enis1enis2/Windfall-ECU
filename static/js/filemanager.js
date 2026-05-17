@@ -124,8 +124,4 @@ async function createFolder(serverId) {
   }
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+

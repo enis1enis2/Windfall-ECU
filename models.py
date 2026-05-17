@@ -24,6 +24,11 @@ def init_db():
          FOREIGN KEY(server_id) REFERENCES servers(id) ON DELETE CASCADE)''')
     c.execute('''CREATE TABLE IF NOT EXISTS settings
         (key TEXT PRIMARY KEY, value TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+         username TEXT UNIQUE NOT NULL,
+         password_hash TEXT NOT NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     conn.close()
 

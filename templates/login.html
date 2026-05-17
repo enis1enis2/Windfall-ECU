@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GreatPanel - Login</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+    .login-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+      animation: slideUp 0.3s ease;
+    }
+    .login-card h1 {
+      color: var(--accent);
+      font-size: 28px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .login-card .subtitle {
+      color: var(--text-dim);
+      text-align: center;
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+    .login-card .form-row {
+      margin-bottom: 16px;
+    }
+    .login-card label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .login-card input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border var(--transition);
+    }
+    .login-card input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-subtle);
+    }
+    .login-card .btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      margin-top: 8px;
+    }
+    .login-card .error {
+      color: var(--danger);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .login-card .toggle-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .login-card .toggle-link a {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .login-card .toggle-link a:hover {
+      text-decoration: underline;
+    }
+    .login-card .theme-toggle-wrap {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <h1>GreatPanel</h1>
+    <p class="subtitle">Minecraft Server Manager</p>
+
+    <div class="error" id="login-error"></div>
+
+    <form id="login-form" onsubmit="return doLogin(event)">
+      <div class="form-row">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="admin" required autocomplete="username">
+      </div>
+      <div class="form-row">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    </form>
+
+    <form id="register-form" style="display:none" onsubmit="return doRegister(event)">
+      <div class="form-row">
+        <label for="reg-username">Username</label>
+        <input type="text" id="reg-username" placeholder="Choose a username" required autocomplete="off" minlength="3">
+      </div>
+      <div class="form-row">
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" placeholder="Choose a password" required autocomplete="new-password" minlength="4">
+      </div>
+      <button type="submit" class="btn btn-success" id="register-btn">Create Account</button>
+    </form>
+
+    <div class="toggle-link">
+      <span id="auth-toggle-text">Don't have an account?</span>
+      <a id="auth-toggle-link" onclick="toggleAuthMode()">Register</a>
+    </div>
+
+    <div class="theme-toggle-wrap">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+      localStorage.setItem('greatpanel-theme', next);
+    }
+
+    const savedTheme = localStorage.getItem('greatpanel-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+    let isRegister = false;
+
+    function toggleAuthMode() {
+      isRegister = !isRegister;
+      document.getElementById('login-form').style.display = isRegister ? 'none' : '';
+      document.getElementById('register-form').style.display = isRegister ? '' : 'none';
+      document.getElementById('auth-toggle-text').textContent = isRegister ? 'Already have an account?' : "Don't have an account?";
+      document.getElementById('auth-toggle-link').textContent = isRegister ? 'Sign In' : 'Register';
+      document.getElementById('login-error').style.display = 'none';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.style.display = '';
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+          })
+        });
+        const data = await r.json();
+        if (r.ok) {
+          window.location.href = '/';
+        } else {
+          showError(data.error || 'Login failed');
+        }
+      } catch (e) {
+        showError('Connection error');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+
+    async function doRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('register-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      try {
+        const r = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('reg-username').value.trim(),
+            password: document.getElementById('reg-password').value
+          })
+        });
+        const data = await r.json();
+        if (r.ok) {
+          window.location.href = '/';
+        } else {
+          showError(data.error || 'Registration failed');
+        }
+      } catch (e) {
+        showError('Connection error');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  </script>
+</body>
+</html>

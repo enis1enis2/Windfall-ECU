@@ -4,7 +4,7 @@ eventlet.monkey_patch()
 import os
 import json
 import shutil
-from flask import Flask, render_template, request, jsonify, send_file, abort
+from flask import Flask, render_template, request, jsonify, send_file, abort, session
 from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server
@@ -17,6 +17,7 @@ from zip_importer import import_zip
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
 from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
+from auth import login_required, register_user, verify_user, init_auth
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -27,16 +28,64 @@ socketio = SocketIO(app, cors_allowed_origins=os.environ.get('GREATPANEL_ORIGIN'
 os.makedirs(SERVERS_DIR, exist_ok=True)
 os.makedirs(BACKUPS_DIR, exist_ok=True)
 init_db()
+init_auth()
 
 setup_terminal_handlers(socketio)
 
 
 @app.route('/')
 def index():
+    if 'user_id' not in session:
+        return render_template('login.html')
     return render_template('index.html')
 
 
+# --- Auth routes ---
+
+@app.route('/api/auth/status', methods=['GET'])
+def api_auth_status():
+    if 'user_id' in session:
+        return jsonify({'authenticated': True, 'username': session.get('username')})
+    return jsonify({'authenticated': False})
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_auth_login():
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    user_id = verify_user(username, password)
+    if user_id:
+        session['user_id'] = user_id
+        session['username'] = username
+        return jsonify({'status': 'ok', 'username': username})
+    return jsonify({'error': 'Invalid username or password'}), 401
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def api_auth_register():
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    ok, msg = register_user(username, password)
+    if ok:
+        user_id = verify_user(username, password)
+        session['user_id'] = user_id
+        session['username'] = username
+        return jsonify({'status': 'ok', 'username': username}), 201
+    return jsonify({'error': msg}), 400
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def api_auth_logout():
+    session.clear()
+    return jsonify({'status': 'logged out'})
+
+
+# --- API routes ---
+
 @app.route('/api/servers', methods=['GET'])
+@login_required
 def api_servers_list():
     servers = get_servers()
     result = []
@@ -49,6 +98,7 @@ def api_servers_list():
 
 
 @app.route('/api/servers', methods=['POST'])
+@login_required
 def api_servers_create():
     data = request.json
     name = data.get('name', 'New Server')
@@ -70,6 +120,7 @@ def api_servers_create():
 
 
 @app.route('/api/servers/<int:server_id>', methods=['GET'])
+@login_required
 def api_server_get(server_id):
     server = get_server(server_id)
     if not server:
@@ -80,6 +131,7 @@ def api_server_get(server_id):
 
 
 @app.route('/api/servers/<int:server_id>', methods=['DELETE'])
+@login_required
 def api_server_delete(server_id):
     server = get_server(server_id)
     if not server:
@@ -92,6 +144,7 @@ def api_server_delete(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/start', methods=['POST'])
+@login_required
 def api_server_start(server_id):
     server = get_server(server_id)
     if not server:
@@ -115,6 +168,7 @@ def api_server_start(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/stop', methods=['POST'])
+@login_required
 def api_server_stop(server_id):
     proc = get_server_process(server_id)
     if not proc:
@@ -125,6 +179,7 @@ def api_server_stop(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/restart', methods=['POST'])
+@login_required
 def api_server_restart(server_id):
     server = get_server(server_id)
     if not server:
@@ -147,6 +202,7 @@ def api_server_restart(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/status', methods=['GET'])
+@login_required
 def api_server_status(server_id):
     proc = get_server_process(server_id)
     if proc:
@@ -155,6 +211,7 @@ def api_server_status(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files', methods=['GET'])
+@login_required
 def api_files_list(server_id):
     server = get_server(server_id)
     if not server:
@@ -167,6 +224,7 @@ def api_files_list(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/read', methods=['GET'])
+@login_required
 def api_files_read(server_id):
     server = get_server(server_id)
     if not server:
@@ -179,6 +237,7 @@ def api_files_read(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/write', methods=['POST'])
+@login_required
 def api_files_write(server_id):
     server = get_server(server_id)
     if not server:
@@ -189,6 +248,7 @@ def api_files_write(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/delete', methods=['POST'])
+@login_required
 def api_files_delete(server_id):
     server = get_server(server_id)
     if not server:
@@ -199,6 +259,7 @@ def api_files_delete(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/mkdir', methods=['POST'])
+@login_required
 def api_files_mkdir(server_id):
     server = get_server(server_id)
     if not server:
@@ -209,6 +270,7 @@ def api_files_mkdir(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/upload', methods=['POST'])
+@login_required
 def api_files_upload(server_id):
     server = get_server(server_id)
     if not server:
@@ -222,6 +284,7 @@ def api_files_upload(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/files/download', methods=['GET'])
+@login_required
 def api_files_download(server_id):
     server = get_server(server_id)
     if not server:
@@ -236,6 +299,7 @@ def api_files_download(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/backups', methods=['GET'])
+@login_required
 def api_backups_list(server_id):
     server = get_server(server_id)
     if not server:
@@ -244,6 +308,7 @@ def api_backups_list(server_id):
 
 
 @app.route('/api/servers/<int:server_id>/backups', methods=['POST'])
+@login_required
 def api_backups_create(server_id):
     server = get_server(server_id)
     if not server:
@@ -256,18 +321,21 @@ def api_backups_create(server_id):
 
 
 @app.route('/api/backups/<int:backup_id>/restore', methods=['POST'])
+@login_required
 def api_backups_restore(backup_id):
     ok, msg = restore_backup(backup_id)
     return jsonify({'status': msg}), 200 if ok else 400
 
 
 @app.route('/api/backups/<int:backup_id>', methods=['DELETE'])
+@login_required
 def api_backups_delete(backup_id):
     ok, msg = delete_backup(backup_id)
     return jsonify({'status': msg}), 200 if ok else 400
 
 
 @app.route('/api/import/zip', methods=['POST'])
+@login_required
 def api_import_zip():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -284,6 +352,7 @@ def api_import_zip():
 
 
 @app.route('/api/servers/<int:server_id>/console', methods=['GET'])
+@login_required
 def api_console(server_id):
     server = get_server(server_id)
     if not server:
@@ -303,7 +372,6 @@ def api_console(server_id):
         if os.path.isfile(log_file):
             try:
                 file_size = os.path.getsize(log_file)
-                read_size = min(file_size, MAX_CONSOLE_BYTES)
                 with open(log_file, 'r', errors='replace') as f:
                     if file_size > MAX_CONSOLE_BYTES:
                         f.seek(file_size - MAX_CONSOLE_BYTES)
@@ -319,11 +387,13 @@ def api_console(server_id):
 
 
 @app.route('/api/system/docker', methods=['GET'])
+@login_required
 def api_docker_check():
     return jsonify({'available': check_docker()})
 
 
 @app.route('/api/settings', methods=['GET'])
+@login_required
 def api_settings_get():
     from models import get_setting
     return jsonify({
@@ -333,6 +403,7 @@ def api_settings_get():
 
 
 @app.route('/api/settings', methods=['POST'])
+@login_required
 def api_settings_set():
     from models import set_setting
     data = request.json
@@ -342,6 +413,7 @@ def api_settings_set():
 
 
 @app.route('/api/servers/<int:server_id>/java_args', methods=['PUT'])
+@login_required
 def api_server_java_args(server_id):
     server = get_server(server_id)
     if not server:
@@ -353,11 +425,13 @@ def api_server_java_args(server_id):
 
 
 @app.route('/api/download/types', methods=['GET'])
+@login_required
 def api_download_types():
     return jsonify(get_types())
 
 
 @app.route('/api/download/versions/<server_type>', methods=['GET'])
+@login_required
 def api_download_versions(server_type):
     try:
         versions = get_versions(server_type)
@@ -367,6 +441,7 @@ def api_download_versions(server_type):
 
 
 @app.route('/api/download/builds/<server_type>/<version>', methods=['GET'])
+@login_required
 def api_download_builds(server_type, version):
     try:
         builds = get_builds(server_type, version)
@@ -376,6 +451,7 @@ def api_download_builds(server_type, version):
 
 
 @app.route('/api/download', methods=['POST'])
+@login_required
 def api_download():
     data = request.json
     server_type = data.get('type')
@@ -396,6 +472,7 @@ def api_download():
 
 
 @app.route('/api/servers/<int:server_id>/upgrade', methods=['POST'])
+@login_required
 def api_server_upgrade(server_id):
     server = get_server(server_id)
     if not server:
@@ -432,6 +509,7 @@ def api_server_upgrade(server_id):
 
 
 @app.route('/api/plugins/search', methods=['GET'])
+@login_required
 def api_plugins_search():
     q = request.args.get('q', '')
     provider = request.args.get('provider')
@@ -446,6 +524,7 @@ def api_plugins_search():
 
 
 @app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
+@login_required
 def api_plugin_versions(provider, project_id):
     try:
         versions = plugin_get_versions(provider, project_id)
@@ -455,6 +534,7 @@ def api_plugin_versions(provider, project_id):
 
 
 @app.route('/api/plugins/install', methods=['POST'])
+@login_required
 def api_plugin_install():
     data = request.json
     server_id = data.get('server_id')
@@ -473,11 +553,13 @@ def api_plugin_install():
 
 
 @app.route('/api/servers/<int:server_id>/plugins', methods=['GET'])
+@login_required
 def api_plugins_list(server_id):
     return jsonify(list_installed(server_id))
 
 
 @app.route('/api/servers/<int:server_id>/plugins/<filename>', methods=['DELETE'])
+@login_required
 def api_plugin_delete(server_id, filename):
     ok, msg = delete_plugin(server_id, filename)
     if ok:

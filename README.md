@@ -13,6 +13,7 @@ A self-hosted web-based Minecraft server management panel. Start, stop, configur
 - **Auto-Upgrade** — Upgrade server JARs to the latest version with automatic backup
 - **ZIP Import** — Import existing server directories via drag-and-drop ZIP upload
 - **Server Properties Editor** — Edit `server.properties` directly from the UI
+- **Authentication** — Login/register system with session-based auth (default: `admin`/`admin`)
 - **Dark/Light Theme** — Toggle between dark and light mode (persisted in localStorage)
 - **Docker Support** — Run servers in isolated Docker containers
 - **EULA Auto-Create** — `eula=true` written automatically on server creation
@@ -26,6 +27,10 @@ python app.py
 ```
 
 Open http://localhost:8080 in your browser.
+
+**Default login:** username `admin`, password `admin`
+
+> ⚠️ Change the default password after first login by registering a new user or directly editing the database.
 
 ### Configuration via Environment Variables
 
@@ -43,8 +48,25 @@ Open http://localhost:8080 in your browser.
 docker compose up -d
 ```
 
+### First Run
+
+On first launch, an `admin` user is created automatically with password `admin`.
+All API routes (except auth endpoints) require authentication via session cookie.
+Use the login page at `http://localhost:8080` or the auth API.
+
 ## API Endpoints
 
+*All endpoints except auth require authentication (session cookie).*
+
+### Auth
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/auth/status` | Check authentication status |
+| POST | `/api/auth/login` | Log in (body: `{"username", "password"}`) |
+| POST | `/api/auth/register` | Register new user (body: `{"username", "password"}`) |
+| POST | `/api/auth/logout` | Log out |
+
+### Servers
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/servers` | List all servers |
