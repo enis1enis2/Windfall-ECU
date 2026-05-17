@@ -1,63 +1,25 @@
 name: autofix.ci
-
 on:
   workflow_call:
   pull_request:
   push:
-    branches: ["main"]
-
+    branches: [ "main" ]
 permissions:
   contents: read
 
 jobs:
   autofix:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
     steps:
-      # Checkout repository
       - uses: actions/checkout@v6
 
-      # -------------------------
-      # Python setup (uv + ruff)
-      # -------------------------
+      # Use uv to ensure we have the same ruff version in CI and locally.
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           version: "0.4.20"
+      # Fix lint errors
+      - run: uv run ruff check --fix-only .
+      # Format code
+      - run: uv run ruff format .
 
-      # -------------------------
-      # Node.js setup (prettier)
-      # -------------------------
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      # Install JS dependencies only if package-lock.json exists
-      - name: Install Node dependencies
-        if: hashFiles('package-lock.json') != ''
-        run: npm ci
-
-      # -------------------------
-      # Python autofix
-      # -------------------------
-      - name: Ruff lint autofix
-        run: uv run ruff check --fix-only .
-
-      - name: Ruff format
-        run: uv run ruff format .
-
-      # -------------------------
-      # JS / TS / HTML / CSS autofix
-      # -------------------------
-      - name: Run Prettier
-        if: hashFiles('package.json') != ''
-        run: npx prettier --write .
-
-      # -------------------------
-      # Auto commit fixes
-      # -------------------------
-      - name: Commit fixes
-        uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a
