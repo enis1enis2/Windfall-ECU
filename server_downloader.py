@@ -43,16 +43,22 @@ def fetch_json(url):
 def get_versions(server_type):
     if server_type == 'paper':
         data = fetch_json(PAPER_API)
+        if not isinstance(data, dict):
+            return []
         return data.get('versions', [])[::-1]
 
     if server_type == 'folia':
         data = fetch_json(FOLIA_API)
+        if not isinstance(data, dict):
+            return []
         return data.get('versions', [])[::-1]
 
     if server_type == 'purpur':
         data = fetch_json(PURPUR_API)
         versions = data.get('versions', {})
-        return sorted(versions.keys(), key=lambda v: [int(x) if x.isdigit() else x for x in v.split('.')], reverse=True)
+        if isinstance(versions, dict):
+            return sorted(versions.keys(), key=lambda v: [int(x) if x.isdigit() else x for x in v.split('.')], reverse=True)
+        return []
 
     if server_type == 'vanilla':
         data = fetch_json(VANILLA_MANIFEST)
@@ -64,11 +70,15 @@ def get_versions(server_type):
 
     if server_type == 'fabric':
         data = fetch_json(f'{FABRIC_META}/game')
-        return [v['version'] for v in data if v.get('stable', False)][::-1]
+        if not isinstance(data, list):
+            return []
+        return [v['version'] for v in data if isinstance(v, dict) and v.get('stable', False)][::-1]
 
     if server_type == 'quilt':
         data = fetch_json(f'{QUILT_META}/game')
-        return [v['version'] for v in data][::-1]
+        if not isinstance(data, list):
+            return []
+        return [v['version'] for v in data if isinstance(v, dict)][::-1]
 
     if server_type == 'forge':
         try:
@@ -95,24 +105,25 @@ def get_versions(server_type):
 
 
 def get_builds(server_type, version):
-    if server_type == 'paper':
-        data = fetch_json(f'{PAPER_API}/versions/{version}/builds')
-        builds = [b for b in data.get('builds', []) if b.get('channel') == 'default']
-        # Paper recent API uses 'channel': 'default' for stable
+    if server_type in ('paper', 'folia'):
+        project = 'paper' if server_type == 'paper' else 'folia'
+        api = PAPER_API if server_type == 'paper' else FOLIA_API
+        data = fetch_json(f'{api}/versions/{version}/builds')
+        if not isinstance(data, dict):
+            return []
+        builds = [b for b in data.get('builds', []) if isinstance(b, dict) and b.get('channel') == 'default']
         if not builds:
             builds = data.get('builds', [])
-        return [{'build': b['build'], 'channel': b.get('channel', 'unknown')} for b in builds]
-
-    if server_type == 'folia':
-        data = fetch_json(f'{FOLIA_API}/versions/{version}/builds')
-        builds = [b for b in data.get('builds', []) if b.get('channel') == 'default']
-        if not builds:
-            builds = data.get('builds', [])
-        return [{'build': b['build'], 'channel': b.get('channel', 'unknown')} for b in builds]
+        return [{'build': b['build'], 'channel': b.get('channel', 'unknown')} for b in builds if isinstance(b, dict)]
 
     if server_type == 'purpur':
         data = fetch_json(f'{PURPUR_API}/{version}')
-        all_builds = data.get('builds', {}).get('all', [])
+        if not isinstance(data, dict):
+            return []
+        builds_obj = data.get('builds', {})
+        if not isinstance(builds_obj, dict):
+            return []
+        all_builds = builds_obj.get('all', [])
         return [{'build': b} for b in all_builds]
 
     return []
@@ -141,7 +152,9 @@ def download_server(server_type, version, build=None, server_name=None):
 def _download_paper(project, version, build, server_name):
     if build is None:
         data = fetch_json(f'https://api.papermc.io/v2/projects/{project}/versions/{version}/builds')
-        bs = [b for b in data.get('builds', []) if b.get('channel') == 'default']
+        if not isinstance(data, dict):
+            return None, 'Invalid API response'
+        bs = [b for b in data.get('builds', []) if isinstance(b, dict) and b.get('channel') == 'default']
         if not bs:
             bs = data.get('builds', [])
         if not bs:
@@ -157,7 +170,10 @@ def _download_paper(project, version, build, server_name):
 def _download_purpur(version, build, server_name):
     if build is None:
         data = fetch_json(f'{PURPUR_API}/{version}')
-        all_b = data.get('builds', {}).get('all', [])
+        if not isinstance(data, dict):
+            return None, 'Invalid API response'
+        builds_obj = data.get('builds', {})
+        all_b = builds_obj.get('all', []) if isinstance(builds_obj, dict) else []
         if not all_b:
             return None, 'No builds found'
         build = all_b[-1]
@@ -210,6 +226,9 @@ def _download_quilt(version, server_name):
 
 def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
     meta = fetch_json(meta_url)
+    if not isinstance(meta, dict):
+        return None, 'Invalid meta response'
+
     main_class = meta.get('mainClass', {})
     if isinstance(main_class, dict):
         main_class = main_class.get('server', '')
@@ -237,7 +256,7 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name):
 
         libs_dir = os.path.join(tmp, 'libraries')
         os.makedirs(libs_dir, exist_ok=True)
-        for lib_url in libs_urls[:20]:
+        for lib_url in lib_urls[:20]:
             try:
                 lr = requests.get(lib_url, timeout=30)
                 lr.raise_for_status()

@@ -15,6 +15,8 @@ def _modrinth_search(query, limit=24):
     r = requests.get(f'{MODRINTH_API}/search', params=params, timeout=TIMEOUT)
     r.raise_for_status()
     data = r.json()
+    if not isinstance(data, dict):
+        return []
     results = []
     for hit in data.get('hits', []):
         results.append({
@@ -37,7 +39,8 @@ def _modrinth_search(query, limit=24):
 def _modrinth_versions(project_id):
     r = requests.get(f'{MODRINTH_API}/project/{project_id}/version', timeout=TIMEOUT)
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+    return data if isinstance(data, list) else []
 
 
 def _modrinth_version(project_id, version_id):
@@ -52,21 +55,34 @@ def _hangar_search(query, limit=24):
         r = requests.get(f'{HANGAR_API}/projects', params=params, timeout=TIMEOUT)
         r.raise_for_status()
         data = r.json()
+        if not isinstance(data, dict):
+            return []
         results = []
         for hit in data.get('result', []):
             ns = hit.get('namespace', {})
+            platforms = hit.get('supportedPlatforms', {})
+            if not isinstance(platforms, dict):
+                platforms = {}
+            all_versions = set()
+            for ver_list in platforms.values():
+                if isinstance(ver_list, list):
+                    all_versions.update(ver_list)
+            sorted_versions = sorted(all_versions, key=lambda v: [int(x) if x.isdigit() else x for x in v.split('.')], reverse=True)
+
+            stats = hit.get('stats', {}) or {}
+            slug_val = ns.get('slug', '') or hit.get('name', '')
             results.append({
                 'provider': 'hangar',
-                'id': hit.get('slug', ''),
-                'slug': hit.get('slug', ''),
+                'id': str(hit.get('id', slug_val)),
+                'slug': slug_val,
                 'name': hit.get('name', ''),
                 'description': (hit.get('description') or '')[:200],
-                'downloads': hit.get('downloadCount', 0),
+                'downloads': stats.get('downloads', 0),
                 'icon_url': hit.get('avatarUrl', ''),
-                'latest_version': hit.get('latestVersion', ''),
-                'game_versions': hit.get('versions', [])[-3:] if hit.get('versions') else [],
-                'loaders': hit.get('platforms', []),
-                'project_url': f'https://hangar.papermc.io/{ns.get("owner", "")}/{hit.get("slug", "")}',
+                'latest_version': sorted_versions[-1] if sorted_versions else '',
+                'game_versions': sorted_versions[-3:],
+                'loaders': [p.lower() for p in platforms.keys()],
+                'project_url': f'https://hangar.papermc.io/{ns.get("owner", "")}/{slug_val}',
                 'author': ns.get('owner', ''),
             })
         return results
