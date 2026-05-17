@@ -20,7 +20,7 @@ async function renderFileTree(serverId, path) {
     const data = await api('GET', `/servers/${serverId}/files?path=${encodeURIComponent(path)}`);
     tree.innerHTML = buildTreeHtml(serverId, data, path);
   } catch (e) {
-    tree.innerHTML = `<p style="color:var(--text-dim);padding:8px;font-size:13px">Error loading files</p>`;
+    tree.innerHTML = `<div class="empty-state"><p>${escapeHtml(e.message)}</p></div>`;
   }
 }
 

@@ -5,7 +5,7 @@ async function loadBackups(serverId) {
     const backups = await api('GET', `/servers/${serverId}/backups`);
     renderBackups(backups, serverId);
   } catch (e) {
-    container.innerHTML = `<div class="empty-state"><p>Error loading backups</p></div>`;
+    container.innerHTML = `<div class="empty-state"><p>${escapeHtml(e.message)}</p></div>`;
   }
 }
 

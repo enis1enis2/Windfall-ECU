@@ -10,7 +10,7 @@ def list_files(base_path, rel_path=''):
         return None, 'Access denied'
 
     if not os.path.isdir(full_path):
-        return None, 'Not a directory'
+        os.makedirs(full_path, exist_ok=True)
 
     entries = []
     try:

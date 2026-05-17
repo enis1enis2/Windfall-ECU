@@ -208,6 +208,7 @@ def list_installed(server_id):
     if not os.path.isdir(plugins_dir):
         return []
 
+
     plugins = []
     for f in os.listdir(plugins_dir):
         fpath = os.path.join(plugins_dir, f)

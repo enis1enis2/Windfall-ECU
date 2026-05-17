@@ -53,7 +53,7 @@ async function loadInstalledPlugins(serverId) {
       list.appendChild(div);
     });
   } catch (e) {
-    list.innerHTML = `<p style="color:var(--text-dim);padding:12px">Error loading plugins</p>`;
+    list.innerHTML = `<div class="empty-state"><p>${escapeHtml(e.message)}</p></div>`;
   }
 }
 
