@@ -19,10 +19,29 @@ A self-hosted web-based Minecraft server management panel. Start, stop, configur
 - **EULA Auto-Create** — `eula=true` written automatically on server creation
 - **Launch Arguments** — Customize JVM arguments per server
 
-## Quick Start
+## Quick Start (Script)
+
+| Platform | Script |
+|----------|--------|
+| Linux / macOS | `./launch.sh` |
+| Windows | Double-click `launch.bat` |
+
+The script installs Python and Java if missing, creates a virtual environment, installs dependencies, optionally sets up autostart, and launches the panel.
+
+---
+
+## Manual Install
 
 ```bash
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate      # Linux/macOS
+# .venv\Scripts\activate        # Windows
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Launch
 python app.py
 ```
 
