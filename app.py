@@ -18,6 +18,7 @@ from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
 from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
 from auth import login_required, register_user, verify_user, init_auth
+from auto_backup import start_auto_backup_scheduler
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -46,6 +47,8 @@ init_db()
 init_auth()
 
 setup_terminal_handlers(socketio)
+
+start_auto_backup_scheduler()
 
 
 @app.route('/')
@@ -413,7 +416,10 @@ def api_settings_get():
     from models import get_setting
     return jsonify({
         'port': get_setting('port', '25565'),
-        'docker_enabled': get_setting('docker_enabled', 'false')
+        'docker_enabled': get_setting('docker_enabled', 'false'),
+        'auto_backup_enabled': get_setting('auto_backup_enabled', 'false'),
+        'auto_backup_interval': get_setting('auto_backup_interval', '60'),
+        'auto_backup_retention': get_setting('auto_backup_retention', '10')
     })
 
 

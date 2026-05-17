@@ -223,6 +223,37 @@ async function saveSettings() {
   }
 }
 
+/* Auto Backup Settings */
+async function openAutoBackupSettings() {
+  try {
+    const data = await api('GET', '/settings');
+    document.getElementById('ab-enabled').checked = data.auto_backup_enabled === 'true';
+    document.getElementById('ab-interval').value = data.auto_backup_interval || '60';
+    document.getElementById('ab-retention').value = data.auto_backup_retention || '10';
+    document.getElementById('autobackup-modal').classList.remove('hidden');
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+}
+
+function closeAutoBackupSettings() {
+  document.getElementById('autobackup-modal').classList.add('hidden');
+}
+
+async function saveAutoBackupSettings() {
+  try {
+    await api('POST', '/settings', {
+      auto_backup_enabled: document.getElementById('ab-enabled').checked ? 'true' : 'false',
+      auto_backup_interval: String(parseInt(document.getElementById('ab-interval').value) || 60),
+      auto_backup_retention: String(parseInt(document.getElementById('ab-retention').value) || 10),
+    });
+    notify('Auto backup settings saved', 'success');
+    closeAutoBackupSettings();
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+}
+
 /* Server Properties Editor */
 async function editServerProperties(serverId) {
   closeSettings();

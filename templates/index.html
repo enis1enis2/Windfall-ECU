@@ -24,6 +24,7 @@
       <div class="sidebar-actions">
         <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
         <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
+        <button class="btn btn-outline btn-sm" onclick="openAutoBackupSettings()" title="Auto Backup">⏱️</button>
         <button class="btn btn-outline btn-sm" onclick="logoutUser()" title="Logout" style="flex:0 0 auto;padding:5px 8px">🚪</button>
       </div>
     </aside>
@@ -207,6 +208,32 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closePropertiesEditor()">Cancel</button>
         <button class="btn btn-success" onclick="saveProperties(activeServerId)">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="autobackup-modal">
+    <div class="modal">
+      <h3>Auto Backup Settings</h3>
+      <div class="form-row">
+        <label>Enable Auto Backup</label>
+        <label class="switch">
+          <input type="checkbox" id="ab-enabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Interval (minutes)</label>
+        <input type="number" id="ab-interval" min="5" value="60">
+      </div>
+      <div class="form-row">
+        <label>Backups to Keep</label>
+        <input type="number" id="ab-retention" min="1" value="10">
+        <p class="form-hint">Older backups beyond this count are deleted automatically.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAutoBackupSettings()">Cancel</button>
+        <button class="btn btn-success" onclick="saveAutoBackupSettings()">Save</button>
       </div>
     </div>
   </div>

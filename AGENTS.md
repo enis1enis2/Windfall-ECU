@@ -27,6 +27,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `backup_manager.py` | tar.gz backup/restore per server |
 | `file_explorer.py` | Path-restricted file CRUD under server dir |
 | `terminal_handler.py` | WebSocket terminal I/O (connect_terminal, terminal_input) |
+| `auto_backup.py` | Background scheduler for automatic backups (customizable interval, retention, enable/disable) |
 | `docker_manager.py` | Docker container lifecycle (build/run/stop) |
 | `zip_importer.py` | ZIP import with server type detection from JAR filename |
 | `static/js/*.js` | One JS file per feature (app, backups, download, filemanager, import, plugins, terminal) |
