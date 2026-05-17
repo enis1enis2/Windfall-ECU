@@ -17,7 +17,7 @@ from zip_importer import import_zip
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
 from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
-from auth import login_required, register_user, verify_user, init_auth
+from auth import login_required, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, delete_user
 from auto_backup import start_auto_backup_scheduler
 
 app = Flask(__name__)
@@ -98,6 +98,43 @@ def api_auth_register():
 def api_auth_logout():
     session.clear()
     return jsonify({'status': 'logged out'})
+
+
+# --- User management ---
+
+@app.route('/api/users', methods=['GET'])
+@login_required
+def api_users_list():
+    return jsonify(get_users())
+
+
+@app.route('/api/users/<int:user_id>', methods=['PATCH'])
+@login_required
+def api_user_update(user_id):
+    user = get_user_by_id(user_id)
+    if not user:
+        abort(404)
+    data = request.json
+    if 'password' in data:
+        ok, msg = change_password(user_id, data['password'])
+        if not ok:
+            return jsonify({'error': msg}), 400
+    if 'username' in data:
+        ok, msg = change_username(user_id, data['username'])
+        if not ok:
+            return jsonify({'error': msg}), 400
+    return jsonify({'status': 'updated'})
+
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@login_required
+def api_user_delete(user_id):
+    if user_id == session.get('user_id'):
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    ok, msg = delete_user(user_id)
+    if not ok:
+        return jsonify({'error': msg}), 400
+    return jsonify({'status': 'deleted'})
 
 
 # --- API routes ---

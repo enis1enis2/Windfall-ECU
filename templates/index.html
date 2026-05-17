@@ -26,6 +26,7 @@
         <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
         <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
         <button class="btn btn-outline btn-sm" onclick="openAutoBackupSettings()" title="Auto Backup">⏱️</button>
+        <button class="btn btn-outline btn-sm" onclick="openUserManager()" title="Users">👤</button>
         <button class="btn btn-outline btn-sm" onclick="logoutUser()" title="Logout" style="flex:0 0 auto">🚪</button>
       </div>
       <div class="sidebar-footer">
@@ -220,6 +221,36 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closePropertiesEditor()">Cancel</button>
         <button class="btn btn-success" onclick="saveProperties(activeServerId)">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="users-modal">
+    <div class="modal" style="max-width:520px">
+      <h3>User Manager</h3>
+      <div id="users-list" style="margin-bottom:16px"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeUserManager()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="user-edit-modal">
+    <div class="modal">
+      <h3 id="user-edit-title">Edit User</h3>
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="user-edit-username" placeholder="username">
+      </div>
+      <div class="form-row">
+        <label>New Password</label>
+        <input type="password" id="user-edit-password" placeholder="Leave blank to keep current">
+      </div>
+      <input type="hidden" id="user-edit-id">
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeUserEdit()">Cancel</button>
+        <button class="btn btn-danger" id="user-delete-btn" onclick="deleteUser()" style="flex:0">Delete</button>
+        <button class="btn btn-success" onclick="saveUser()">Save</button>
       </div>
     </div>
   </div>

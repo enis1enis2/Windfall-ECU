@@ -223,6 +223,78 @@ async function saveSettings() {
   }
 }
 
+/* User Manager */
+async function openUserManager() {
+  try {
+    const users = await api('GET', '/users');
+    const list = document.getElementById('users-list');
+    list.innerHTML = users.map(u => {
+      const date = new Date(u.created_at + 'Z').toLocaleDateString();
+      return `<div class="backup-item" style="cursor:pointer" onclick="openUserEdit(${u.id})">
+        <div class="info">
+          <div class="name">${escapeHtml(u.username)}</div>
+          <div class="meta">ID: ${u.id} &middot; Created: ${date}</div>
+        </div>
+        <span class="btn btn-outline btn-xs">Edit</span>
+      </div>`;
+    }).join('');
+    document.getElementById('users-modal').classList.remove('hidden');
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+}
+
+function closeUserManager() {
+  document.getElementById('users-modal').classList.add('hidden');
+}
+
+async function openUserEdit(userId) {
+  const users = await api('GET', '/users');
+  const user = users.find(u => u.id === userId);
+  if (!user) return;
+  document.getElementById('user-edit-id').value = userId;
+  document.getElementById('user-edit-username').value = user.username;
+  document.getElementById('user-edit-password').value = '';
+  document.getElementById('user-edit-title').textContent = `Edit User: ${user.username}`;
+  closeUserManager();
+  document.getElementById('user-edit-modal').classList.remove('hidden');
+}
+
+function closeUserEdit() {
+  document.getElementById('user-edit-modal').classList.add('hidden');
+}
+
+async function saveUser() {
+  const id = parseInt(document.getElementById('user-edit-id').value);
+  const username = document.getElementById('user-edit-username').value.trim();
+  const password = document.getElementById('user-edit-password').value;
+  const body = {};
+  if (username) body.username = username;
+  if (password) body.password = password;
+  if (!Object.keys(body).length) { closeUserEdit(); return; }
+  try {
+    await api('PATCH', `/users/${id}`, body);
+    notify('User updated', 'success');
+    closeUserEdit();
+    openUserManager();
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+}
+
+async function deleteUser() {
+  const id = parseInt(document.getElementById('user-edit-id').value);
+  if (!confirm('Delete this user permanently?')) return;
+  try {
+    await api('DELETE', `/users/${id}`);
+    notify('User deleted', 'success');
+    closeUserEdit();
+    openUserManager();
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+}
+
 /* Auto Backup Settings */
 async function openAutoBackupSettings() {
   try {

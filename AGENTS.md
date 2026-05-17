@@ -20,7 +20,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `app.py` | Routes, server lifecycle, auth, all REST API handlers |
 | `config.py` | Env-based config (`GREATPANEL_HOST`, `PORT`, `SECRET`, `JAVA`, `ORIGIN`) |
 | `models.py` | SQLite ORM (servers, backups, settings, users tables) |
-| `auth.py` | Session-based auth, default `admin`/`admin` user created on first run |
+| `auth.py` | Session-based auth, default `admin`/`admin` user created on first run, user CRUD |
 | `server_manager.py` | `ServerProcess` class — spawns Java via `subprocess.Popen`, console buffer, log tailing |
 | `server_downloader.py` | Downloads Paper/Folia/Purpur/Vanilla/Fabric/Quilt/Forge/NeoForge JARs |
 | `plugin_downloader.py` | Plugin search from Modrinth & Hangar; install only from Modrinth |
