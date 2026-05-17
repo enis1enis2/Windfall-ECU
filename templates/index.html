@@ -29,6 +29,7 @@
         <div id="server-actions" class="server-actions hidden">
           <button class="btn btn-success btn-sm" onclick="startServer()">Start</button>
           <button class="btn btn-danger btn-sm" onclick="stopServer()">Stop</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSettings(activeServerId)">Settings</button>
           <button class="btn btn-danger btn-sm" onclick="deleteServer()">Delete</button>
         </div>
       </div>
@@ -37,6 +38,7 @@
         <button class="tab active" data-tab="terminal">Terminal</button>
         <button class="tab" data-tab="files">Files</button>
         <button class="tab" data-tab="backups">Backups</button>
+        <button class="tab" data-tab="download">Download</button>
         <button class="tab" data-tab="import">Import</button>
       </div>
 
@@ -59,6 +61,44 @@
           </div>
         </div>
 
+        <div class="tab-content" id="tab-download">
+          <div class="download-panel">
+            <h3 style="margin-bottom:20px">Download Server from Network</h3>
+            <div class="download-form">
+              <div class="form-row">
+                <label>Server Type</label>
+                <select id="dl-type" onchange="onTypeChange()">
+                  <option value="">Select type</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label>Version</label>
+                <select id="dl-version" onchange="onVersionChange()" disabled>
+                  <option value="">Select type first</option>
+                </select>
+              </div>
+              <div class="form-row hidden" id="dl-build-group">
+                <label>Build</label>
+                <select id="dl-build" disabled>
+                  <option value="">Latest</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label>Server Name (optional)</label>
+                <input type="text" id="dl-name" placeholder="Leave blank for auto-name">
+              </div>
+              <div class="form-row">
+                <button class="btn btn-success" id="dl-download-btn" onclick="downloadServer()" disabled>Download</button>
+              </div>
+            </div>
+            <div class="download-info">
+              <p style="color:var(--text-dim);font-size:13px;margin-top:16px">
+                Downloads the selected server JAR and registers it automatically. Forge/NeoForge downloads the installer.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div class="tab-content" id="tab-import">
           <div class="import-panel">
             <h3 style="margin-bottom:16px">Import Server from .zip</h3>
@@ -76,6 +116,32 @@
     </main>
   </div>
 
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="modal">
+      <h3>Server Settings</h3>
+      <div class="form-row">
+        <label>Server Name</label>
+        <input type="text" id="settings-name" disabled style="opacity:0.6">
+      </div>
+      <div class="form-row">
+        <label>Server Type</label>
+        <input type="text" id="settings-type" disabled style="opacity:0.6">
+      </div>
+      <div class="form-row">
+        <label>Launch Arguments (JVM args)</label>
+        <input type="text" id="settings-args" placeholder="-Xmx2G -Xms1G">
+        <p style="font-size:11px;color:var(--text-dim);margin-top:4px">
+          JVM arguments passed to <code>java</code> when starting the server.
+          Example: <code>-Xmx4G -Xms2G -XX:+UseG1GC</code>
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-success" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/socket.io@4.8.1/client-dist/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="/static/js/app.js"></script>
@@ -83,5 +149,6 @@
   <script src="/static/js/filemanager.js"></script>
   <script src="/static/js/backups.js"></script>
   <script src="/static/js/import.js"></script>
+  <script src="/static/js/download.js"></script>
 </body>
 </html>

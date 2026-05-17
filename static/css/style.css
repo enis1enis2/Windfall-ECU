@@ -404,6 +404,65 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+.download-panel {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.download-form {
+  background: var(--sidebar);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.form-row {
+  margin-bottom: 16px;
+}
+
+.form-row label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.form-row select,
+.form-row input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.form-row select:focus,
+.form-row input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.form-row select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.form-row .btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.download-info {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--sidebar);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
 @media (max-width: 768px) {
   .sidebar { width: 200px; }
   .file-panel { flex-direction: column; }

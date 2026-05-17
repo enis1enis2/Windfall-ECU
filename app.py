@@ -12,6 +12,7 @@ from backup_manager import list_backups, create_backup, restore_backup, delete_b
 from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
 from zip_importer import import_zip
 from docker_manager import check_docker
+from server_downloader import get_types, get_versions, get_builds, download_server
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -275,6 +276,60 @@ def api_settings_set():
     for key, value in data.items():
         set_setting(key, str(value))
     return jsonify({'status': 'saved'})
+
+
+@app.route('/api/servers/<int:server_id>/java_args', methods=['PUT'])
+def api_server_java_args(server_id):
+    server = get_server(server_id)
+    if not server:
+        abort(404)
+    data = request.json
+    java_args = data.get('java_args', '-Xmx1G -Xms1G')
+    update_server(server_id, java_args=java_args)
+    return jsonify({'status': 'updated', 'java_args': java_args})
+
+
+@app.route('/api/download/types', methods=['GET'])
+def api_download_types():
+    return jsonify(get_types())
+
+
+@app.route('/api/download/versions/<server_type>', methods=['GET'])
+def api_download_versions(server_type):
+    try:
+        versions = get_versions(server_type)
+        return jsonify(versions)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/download/builds/<server_type>/<version>', methods=['GET'])
+def api_download_builds(server_type, version):
+    try:
+        builds = get_builds(server_type, version)
+        return jsonify(builds)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/download', methods=['POST'])
+def api_download():
+    data = request.json
+    server_type = data.get('type')
+    version = data.get('version')
+    build = data.get('build')
+    server_name = data.get('name')
+
+    if not server_type or not version:
+        return jsonify({'error': 'type and version required'}), 400
+
+    try:
+        server_id, error = download_server(server_type, version, build, server_name)
+        if error:
+            return jsonify({'error': error}), 400
+        return jsonify({'id': server_id, 'status': 'downloaded'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
