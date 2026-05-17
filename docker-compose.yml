@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  greatpanel:
+    build: .
+    container_name: greatpanel
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./servers:/app/servers
+      - ./backups:/app/backups
+      - ./instances.db:/app/instances.db
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0

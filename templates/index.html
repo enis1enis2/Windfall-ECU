@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GreatPanel</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>GreatPanel</h1>
+        <p>Minecraft Server Manager</p>
+      </div>
+      <nav class="sidebar-nav" id="server-list">
+        <div class="spinner"></div>
+      </nav>
+      <div class="sidebar-actions">
+        <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
+        <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-header">
+        <h2 id="main-title">Select a server</h2>
+        <div id="server-actions" class="server-actions hidden">
+          <button class="btn btn-success btn-sm" onclick="startServer()">Start</button>
+          <button class="btn btn-danger btn-sm" onclick="stopServer()">Stop</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteServer()">Delete</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="terminal">Terminal</button>
+        <button class="tab" data-tab="files">Files</button>
+        <button class="tab" data-tab="backups">Backups</button>
+        <button class="tab" data-tab="import">Import</button>
+      </div>
+
+      <div class="content">
+        <div class="tab-content active" id="tab-terminal">
+          <div class="terminal-container" id="terminal-container">
+            <div class="empty-state"><p>Select a server and start it to access the terminal</p></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-files">
+          <div class="file-panel" id="file-panel" style="height:100%">
+            <div class="empty-state" style="width:100%"><p>Select a server to browse files</p></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-backups">
+          <div class="backup-list" id="backup-list">
+            <div class="empty-state"><p>Select a server to manage backups</p></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-import">
+          <div class="import-panel">
+            <h3 style="margin-bottom:16px">Import Server from .zip</h3>
+            <div class="import-zone" id="import-zone">
+              <div class="icon">📦</div>
+              <p>Drop a .zip file here or click to browse</p>
+              <p style="font-size:12px;margin-top:8px;color:var(--text-dim)">
+                The zip should contain a server JAR and config files (e.g. Paper, Spigot, Vanilla)
+              </p>
+            </div>
+            <input type="file" id="import-input" accept=".zip" style="display:none">
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/socket.io@4.8.1/client-dist/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/terminal.js"></script>
+  <script src="/static/js/filemanager.js"></script>
+  <script src="/static/js/backups.js"></script>
+  <script src="/static/js/import.js"></script>
+</body>
+</html>
