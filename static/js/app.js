@@ -23,6 +23,10 @@ async function api(method, path, body) {
     opts.body = body;
   }
   const r = await fetch(API + path, opts);
+  if (r.status === 401) {
+    window.location.href = '/?_=' + Date.now();
+    throw new Error('Authentication required');
+  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: r.statusText }));
     throw new Error(err.error || r.statusText);
@@ -258,14 +262,16 @@ function toggleTheme() {
   const current = html.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
-  document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
   localStorage.setItem('greatpanel-theme', next);
 }
 
 function loadTheme() {
   const saved = localStorage.getItem('greatpanel-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
-  document.getElementById('theme-toggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
 }
 
 /* Tab click handlers */
@@ -287,7 +293,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-loadTheme();
+try { loadTheme(); } catch (e) { /* theme toggle may not exist in cached html */ }
 loadServers();
 
 function logoutUser() {

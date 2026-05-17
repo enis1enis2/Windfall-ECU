@@ -27,6 +27,21 @@ socketio = SocketIO(app, cors_allowed_origins=os.environ.get('GREATPANEL_ORIGIN'
 
 os.makedirs(SERVERS_DIR, exist_ok=True)
 os.makedirs(BACKUPS_DIR, exist_ok=True)
+
+# Kill any leftover process on the same port
+import subprocess as _sp
+for _cmd in [['fuser', '-k', f'{PORT}/tcp'], ['lsof', '-ti', f'tcp:{PORT}']]:
+    try:
+        _r = _sp.run(_cmd, capture_output=True, text=True, timeout=5)
+        if _cmd[0] == 'lsof' and _r.stdout.strip():
+            for _pid in _r.stdout.strip().splitlines():
+                _sp.run(['kill', '-9', _pid], capture_output=True, timeout=3)
+        break
+    except FileNotFoundError:
+        continue
+    except Exception:
+        pass
+
 init_db()
 init_auth()
 
