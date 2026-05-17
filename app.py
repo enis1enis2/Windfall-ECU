@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import json
 import shutil
@@ -6,7 +9,7 @@ from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server
 from server_manager import (ServerProcess, get_server_process, register_server,
-                            unregister_server, get_server_path)
+                            unregister_server, get_server_path, get_console_output)
 from terminal_handler import setup_terminal_handlers
 from backup_manager import list_backups, create_backup, restore_backup, delete_backup
 from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
@@ -254,6 +257,18 @@ def api_import_zip():
     if error:
         return jsonify({'error': error}), 400
     return jsonify({'id': server_id, 'status': 'imported'}), 201
+
+
+@app.route('/api/servers/<int:server_id>/console', methods=['GET'])
+def api_console(server_id):
+    server = get_server(server_id)
+    if not server:
+        abort(404)
+    proc = get_server_process(server_id)
+    if not proc or not proc.is_running:
+        return jsonify({'output': '', 'pos': 0, 'running': False})
+    output, pos = get_console_output(server_id)
+    return jsonify({'output': output, 'pos': pos, 'running': True})
 
 
 @app.route('/api/system/docker', methods=['GET'])

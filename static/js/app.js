@@ -59,14 +59,7 @@ function renderServerList() {
 }
 
 function selectServer(id) {
-  if (window.terminalInstance) {
-    window.terminalInstance.dispose();
-    window.terminalInstance = null;
-  }
-  if (window.terminalSocket) {
-    window.terminalSocket.disconnect();
-    window.terminalSocket = null;
-  }
+  cleanupTerminal();
   activeServerId = id;
   renderServerList();
   const server = servers.find(s => s.id === id);
@@ -114,8 +107,17 @@ async function startServer() {
   try {
     await api('POST', `/servers/${activeServerId}/start`);
     notify('Server starting...', 'info');
-    await loadServers();
-    setTimeout(() => selectServer(activeServerId), 500);
+    // Poll until server is actually running, then refresh
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      await loadServers();
+      const s = servers.find(x => x.id === activeServerId);
+      if (s && s.status && s.status.running) {
+        selectServer(activeServerId);
+        return;
+      }
+    }
+    notify('Server took too long to start', 'error');
   } catch (e) {
     notify(e.message, 'error');
   }
@@ -126,7 +128,10 @@ async function stopServer() {
   try {
     await api('POST', `/servers/${activeServerId}/stop`);
     notify('Server stopped', 'info');
+    cleanupTerminal();
     await loadServers();
+    const container = document.getElementById('terminal-container');
+    container.innerHTML = `<div class="empty-state"><p>Server stopped</p></div>`;
   } catch (e) {
     notify(e.message, 'error');
   }
@@ -147,6 +152,13 @@ document.querySelectorAll('.tab').forEach(el => {
     if (tab === 'backups' && activeServerId) loadBackups(activeServerId);
     if (tab === 'plugins' && activeServerId) loadPlugins(activeServerId);
   });
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && activeTab === 'terminal' && activeServerId) {
+    cleanupTerminal();
+    loadTerminal(activeServerId);
+  }
 });
 
 loadServers();

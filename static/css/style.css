@@ -218,6 +218,18 @@ body {
 .terminal-container .xterm { height: 100%; padding: 8px; }
 .terminal-container .xterm-viewport { overflow-y: auto; }
 
+.terminal-status-bar {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: #0a0a0a;
+  border-bottom: 1px solid var(--border);
+  font-family: monospace;
+}
+.terminal-status-bar.connected { color: var(--success); }
+.terminal-status-bar.polling { color: var(--warning); }
+.terminal-status-bar.error { color: var(--danger); }
+
 .file-panel {
   display: flex;
   height: 100%;
