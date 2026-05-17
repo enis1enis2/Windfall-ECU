@@ -12,7 +12,8 @@
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div>
+        <div class="logo">G</div>
+        <div class="brand">
           <h1>GreatPanel</h1>
           <p>Minecraft Server Manager</p>
         </div>
@@ -25,7 +26,7 @@
         <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
         <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
         <button class="btn btn-outline btn-sm" onclick="openAutoBackupSettings()" title="Auto Backup">⏱️</button>
-        <button class="btn btn-outline btn-sm" onclick="logoutUser()" title="Logout" style="flex:0 0 auto;padding:5px 8px">🚪</button>
+        <button class="btn btn-outline btn-sm" onclick="logoutUser()" title="Logout" style="flex:0 0 auto">🚪</button>
       </div>
     </aside>
 
@@ -128,6 +129,10 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <div class="app-footer">
+    <a href="https://github.com/enis1enis2/GreatPanel" target="_blank" rel="noopener">GreatPanel</a> &mdash; Open Source Minecraft Server Manager
   </div>
 
   <div class="modal-overlay hidden" id="plugin-install-dialog">
