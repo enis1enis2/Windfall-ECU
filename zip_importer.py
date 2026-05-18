@@ -86,6 +86,6 @@ def import_zip(file_storage, server_name=None):
     except zipfile.BadZipFile:
         shutil.rmtree(tmp_dir)
         return None, 'Invalid zip file'
-    except Exception as e:
+    except Exception:
         shutil.rmtree(tmp_dir)
-        return None, str(e)
+        return None, 'Import failed'

@@ -33,8 +33,8 @@ def create_backup(server_id, name=None):
     try:
         with tarfile.open(backup_path, 'w:gz') as tar:
             tar.add(server_path, arcname=os.path.basename(server_path))
-    except Exception as e:
-        return None, str(e)
+    except Exception:
+        return None, 'Backup failed'
 
     size = os.path.getsize(backup_path)
     backup_id = create_backup_entry(server_id, name, backup_path, size)
@@ -104,10 +104,10 @@ def restore_backup(backup_id):
 
         shutil.rmtree(temp_dir)
         return True, 'Backup restored successfully'
-    except Exception as e:
+    except Exception:
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
-        return False, str(e)
+        return False, 'Restore failed'
 
 
 def delete_backup(backup_id):

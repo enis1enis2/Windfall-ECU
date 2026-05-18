@@ -55,8 +55,8 @@ def check_updates():
                 'log': log_result.stdout.strip()
             }
         return {'update_available': False, 'commits_behind': 0}
-    except Exception as e:
-        return {'update_available': False, 'error': str(e)}
+    except Exception:
+        return {'update_available': False, 'error': 'Update check failed'}
 
 
 def install_updates():
@@ -76,8 +76,8 @@ def install_updates():
                 pass
             return {'success': True, 'output': result.stdout}
         return {'success': False, 'error': result.stderr}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
+    except Exception:
+        return {'success': False, 'error': 'Install failed'}
 
 
 def _do_restart():

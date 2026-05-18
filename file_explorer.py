@@ -52,8 +52,8 @@ def read_file(base_path, rel_path):
         with open(full_path, 'r', errors='replace') as f:
             content = f.read()
         return content, None
-    except Exception as e:
-        return None, str(e)
+    except Exception:
+        return None, 'Failed to read file'
 
 
 def write_file(base_path, rel_path, content):
@@ -66,8 +66,8 @@ def write_file(base_path, rel_path, content):
         with open(full_path, 'w') as f:
             f.write(content)
         return True, 'File saved'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Failed to write file'
 
 
 def delete_entry(base_path, rel_path):
@@ -84,8 +84,8 @@ def delete_entry(base_path, rel_path):
         else:
             os.remove(full_path)
         return True, 'Deleted'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Failed to delete'
 
 
 def create_directory(base_path, rel_path, name):
@@ -96,8 +96,8 @@ def create_directory(base_path, rel_path, name):
     try:
         os.makedirs(full_path, exist_ok=True)
         return True, 'Directory created'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Failed to create directory'
 
 
 def upload_file(base_path, rel_path, filename, content):
@@ -115,5 +115,5 @@ def upload_file(base_path, rel_path, filename, content):
         with open(full_path, mode) as f:
             f.write(content)
         return True, 'File uploaded'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Failed to upload file'

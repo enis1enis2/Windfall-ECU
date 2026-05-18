@@ -398,8 +398,9 @@ def api_files_download(server_id):
     if not server:
         abort(404)
     rel_path = request.args.get('path', '')
-    full_path = os.path.normpath(os.path.join(server['path'], rel_path))
-    if not full_path.startswith(os.path.normpath(server['path'])):
+    try:
+        full_path = safe_join(server['path'], rel_path)
+    except ValueError:
         abort(403)
     if not os.path.isfile(full_path):
         abort(404)

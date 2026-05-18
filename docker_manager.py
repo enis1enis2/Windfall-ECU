@@ -63,8 +63,8 @@ CMD {cmd_json}
         return True, container_name
     except subprocess.TimeoutExpired:
         return False, 'Docker operation timed out'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Docker build/run failed'
 
 
 def stop_docker_container(container_name):
@@ -74,8 +74,8 @@ def stop_docker_container(container_name):
         subprocess.run(['docker', 'stop', container_name], capture_output=True, text=True, timeout=30)
         subprocess.run(['docker', 'rm', container_name], capture_output=True, text=True, timeout=30)
         return True, 'Container stopped and removed'
-    except Exception as e:
-        return False, str(e)
+    except Exception:
+        return False, 'Failed to stop Docker container'
 
 
 def get_docker_logs(container_name, tail=100):
@@ -87,8 +87,8 @@ def get_docker_logs(container_name, tail=100):
             capture_output=True, text=True, timeout=10
         )
         return result.stdout + result.stderr, None
-    except Exception as e:
-        return None, str(e)
+    except Exception:
+        return None, 'Failed to get Docker logs'
 
 
 def docker_exec_command(container_name, command):
@@ -100,5 +100,5 @@ def docker_exec_command(container_name, command):
             capture_output=True, text=True, timeout=30
         )
         return result.stdout + result.stderr, None
-    except Exception as e:
-        return None, str(e)
+    except Exception:
+        return None, 'Docker exec failed'

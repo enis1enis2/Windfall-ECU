@@ -352,9 +352,9 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name, server_
                                   java_args='-Xmx2G -Xms1G', server_type=server_type)
         return server_id, None
 
-    except Exception as e:
+    except Exception:
         shutil.rmtree(tmp, ignore_errors=True)
-        return None, str(e)
+        return None, 'Download failed'
 
 
 def _latest_forge_version(mc_version):
@@ -415,6 +415,6 @@ def _download_and_create_server(jar_url, jar_name, version, server_name, server_
                                   java_args='-Xmx2G -Xms1G', server_type=server_type)
         return server_id, None
 
-    except Exception as e:
+    except Exception:
         shutil.rmtree(tmp, ignore_errors=True)
-        return None, str(e)
+        return None, 'Download failed'
