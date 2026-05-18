@@ -1,63 +1,35 @@
-import threading
-import time
+import os, threading, time
 from datetime import datetime
-
-from models import get_servers, get_server, get_backups, delete_backup_entry, get_setting, set_setting
+from models import get_servers, get_backups, delete_backup_entry, get_setting
 from backup_manager import create_backup
-from config import BACKUPS_DIR
-import os
-import shutil
 
-_SCHEDULER_RUNNING = threading.Event()
-_SCHEDULER_THREAD = None
-_LAST_RUN = 0
+_scheduler_stop = threading.Event()
+_scheduler_thread = None
+_last_run = 0
 
-
-def _scheduler_loop():
-    while not _SCHEDULER_RUNNING.is_set():
+def _loop():
+    while not _scheduler_stop.is_set():
         try:
-            enabled = get_setting('auto_backup_enabled', 'false')
-            if enabled == 'true':
-                interval = int(get_setting('auto_backup_interval', '60'))
-                retention = int(get_setting('auto_backup_retention', '10'))
+            if get_setting('auto_backup_enabled', 'false') == 'true':
+                global _last_run
                 now = time.time()
-                global _LAST_RUN
-                if now - _LAST_RUN >= interval * 60:
-                    _LAST_RUN = now
-                    _run_backups(retention)
-        except Exception:
-            pass
-        _SCHEDULER_RUNNING.wait(60)
-
-
-def _run_backups(retention):
-    servers = get_servers()
-    for srv in servers:
-        try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            create_backup(srv['id'], f"auto_{srv['name']}_{timestamp}")
-            _prune_old_backups(srv['id'], retention)
-        except Exception:
-            pass
-
-
-def _prune_old_backups(server_id, keep_count):
-    backups = get_backups(server_id)
-    if len(backups) <= keep_count:
-        return
-    for b in backups[keep_count:]:
-        try:
-            if os.path.isfile(b['path']):
-                os.remove(b['path'])
-        except Exception:
-            pass
-        delete_backup_entry(b['id'])
-
+                if now - _last_run >= int(get_setting('auto_backup_interval', '60')) * 60:
+                    _last_run = now
+                    for srv in get_servers():
+                        try:
+                            create_backup(srv['id'], f"auto_{srv['name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+                            bs = get_backups(srv['id'])
+                            keep = int(get_setting('auto_backup_retention', '10'))
+                            for b in bs[keep:]:
+                                if os.path.isfile(b['path']): os.remove(b['path'])
+                                delete_backup_entry(b['id'])
+                        except Exception: pass
+        except Exception: pass
+        _scheduler_stop.wait(60)
 
 def start_auto_backup_scheduler():
-    global _SCHEDULER_THREAD
-    if _SCHEDULER_THREAD is not None:
-        return
-    _LAST_RUN = time.time()
-    _SCHEDULER_THREAD = threading.Thread(target=_scheduler_loop, daemon=True)
-    _SCHEDULER_THREAD.start()
+    global _scheduler_thread, _last_run
+    if _scheduler_thread: return
+    _last_run = time.time()
+    _scheduler_thread = threading.Thread(target=_loop, daemon=True)
+    _scheduler_thread.start()

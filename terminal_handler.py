@@ -1,32 +1,20 @@
 from flask import request, session
 from server_manager import get_server_process
 
-
 def setup_terminal_handlers(socketio):
     @socketio.on('connect_terminal')
     def handle_connect(data):
-        if 'user_id' not in session:
-            return
-        server_id = data.get('server_id')
-        server_proc = get_server_process(server_id)
-        if server_proc:
+        if 'user_id' not in session: return
+        sp = get_server_process(data.get('server_id'))
+        if sp:
             sid = request.sid
-
-            def send_output(msg):
-                socketio.emit('terminal_output', {'data': msg}, room=sid)
-
-            server_proc.output_callback = send_output
+            sp.output_callback = lambda msg: socketio.emit('terminal_output', {'data': msg}, room=sid)
 
     @socketio.on('terminal_input')
     def handle_input(data):
-        if 'user_id' not in session:
-            return
-        server_id = data.get('server_id')
-        command = data.get('data', '')
-        server_proc = get_server_process(server_id)
-        if server_proc:
-            server_proc.write_input(command)
+        if 'user_id' not in session: return
+        sp = get_server_process(data.get('server_id'))
+        if sp: sp.write_input(data.get('data', ''))
 
     @socketio.on('terminal_resize')
-    def handle_resize(data):
-        pass
+    def handle_resize(data): pass

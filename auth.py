@@ -1,8 +1,7 @@
-import sqlite3
 import functools
 from flask import session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from config import DATABASE
+from models import _fetchone, _fetchall, _execute, get_db
 
 ROLES = {
     'admin': {
@@ -53,129 +52,66 @@ ROLES = {
 }
 
 def init_auth():
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-         username TEXT UNIQUE NOT NULL,
-         password_hash TEXT NOT NULL,
-         role TEXT NOT NULL DEFAULT 'admin',
-         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    try:
-        c.execute('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'admin\'')
-    except sqlite3.OperationalError:
-        pass
-    conn.commit()
-    c.execute('SELECT COUNT(*) FROM users')
-    count = c.fetchone()[0]
-    conn.close()
-    if count == 0:
-        _create_user('admin', 'admin', 'admin')
-
-def _create_user(username, password, role='admin'):
-    pw_hash = generate_password_hash(password)
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    try:
-        c.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                  (username, pw_hash, role))
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-    finally:
-        conn.close()
+    with get_db() as c:
+        try:
+            c.execute('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'admin\'')
+        except Exception:
+            pass
+    if not _fetchone('SELECT COUNT(*) as c FROM users')['c']:
+        pw_hash = generate_password_hash('admin')
+        _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+                 ('admin', pw_hash, 'admin'))
 
 def register_user(username, password):
     if len(username) < 3 or len(password) < 4:
         return False, 'Username must be at least 3 characters, password at least 4'
     pw_hash = generate_password_hash(password)
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
     try:
-        c.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                  (username, pw_hash, 'admin'))
-        conn.commit()
+        _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+                 (username, pw_hash, 'admin'))
         return True, 'User created'
-    except sqlite3.IntegrityError:
+    except Exception:
         return False, 'Username already exists'
-    finally:
-        conn.close()
 
 def verify_user(username, password):
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('SELECT id, password_hash, role FROM users WHERE username = ?', (username,))
-    row = c.fetchone()
-    conn.close()
-    if row and check_password_hash(row[1], password):
-        return row[0], row[2]
+    r = _fetchone('SELECT id, password_hash, role FROM users WHERE username = ?', (username,))
+    if r and check_password_hash(r['password_hash'], password):
+        return r['id'], r['role']
     return None, None
 
 def get_users():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('SELECT id, username, role, created_at FROM users ORDER BY id')
-    rows = c.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    return _fetchall('SELECT id, username, role, created_at FROM users ORDER BY id')
 
 def get_user_by_id(user_id):
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('SELECT id, username, role, created_at FROM users WHERE id = ?', (user_id,))
-    row = c.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return _fetchone('SELECT id, username, role, created_at FROM users WHERE id = ?', (user_id,))
 
 def change_password(user_id, new_password):
     if len(new_password) < 4:
         return False, 'Password must be at least 4 characters'
-    pw_hash = generate_password_hash(new_password)
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('UPDATE users SET password_hash = ? WHERE id = ?', (pw_hash, user_id))
-    conn.commit()
-    conn.close()
+    _execute('UPDATE users SET password_hash = ? WHERE id = ?',
+             (generate_password_hash(new_password), user_id))
     return True, 'Password changed'
 
 def change_username(user_id, new_username):
     if len(new_username) < 3:
         return False, 'Username must be at least 3 characters'
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
     try:
-        c.execute('UPDATE users SET username = ? WHERE id = ?', (new_username, user_id))
-        conn.commit()
+        _execute('UPDATE users SET username = ? WHERE id = ?', (new_username, user_id))
         return True, 'Username changed'
-    except sqlite3.IntegrityError:
+    except Exception:
         return False, 'Username already exists'
-    finally:
-        conn.close()
 
 def change_role(user_id, new_role):
     if new_role not in ROLES:
         return False, 'Invalid role'
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('UPDATE users SET role = ? WHERE id = ?', (new_role, user_id))
-    conn.commit()
-    conn.close()
+    _execute('UPDATE users SET role = ? WHERE id = ?', (new_role, user_id))
     return True, 'Role changed'
 
 def delete_user(user_id):
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('SELECT COUNT(*) FROM users')
-    count = c.fetchone()[0]
-    if count <= 1:
-        conn.close()
+    r = _fetchone('SELECT COUNT(*) as c FROM users')
+    if r['c'] <= 1:
         return False, 'Cannot delete the last user'
-    c.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    conn.commit()
-    conn.close()
+    _execute('DELETE FROM users WHERE id = ?', (user_id,))
     return True, 'User deleted'
 
 def create_user(username, password, role='viewer'):
@@ -185,23 +121,20 @@ def create_user(username, password, role='viewer'):
         return False, 'Password must be at least 4 characters'
     if role not in ROLES:
         return False, 'Invalid role'
-    pw_hash = generate_password_hash(password)
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
     try:
-        c.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                  (username, pw_hash, role))
-        conn.commit()
+        _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+                 (username, generate_password_hash(password), role))
         return True, 'User created'
-    except sqlite3.IntegrityError:
+    except Exception:
         return False, 'Username already exists'
-    finally:
-        conn.close()
 
-def has_permission(permission, role=None):
-    if role is None:
-        role = session.get('role', 'viewer')
-    return permission in ROLES.get(role, ROLES['viewer'])['permissions']
+def login_required(f):
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 def require_permission(permission):
     def decorator(f):
@@ -213,14 +146,3 @@ def require_permission(permission):
             return f(*args, **kwargs)
         return decorated
     return decorator
-
-def login_required(f):
-    @functools.wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'error': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    return decorated
-
-def get_role_permissions(role):
-    return ROLES.get(role, ROLES['viewer']).get('permissions', set())

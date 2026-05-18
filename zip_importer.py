@@ -1,91 +1,46 @@
-import os
-import zipfile
-import tempfile
-import shutil
+import os, zipfile, tempfile, shutil
 from config import SERVERS_DIR
 from models import create_server
 from path_util import safe_path, safe_join, safe_write
 
-
 def import_zip(file_storage, server_name=None):
-    tmp_dir = tempfile.mkdtemp()
-    extract_dir = os.path.join(tmp_dir, 'extracted')
-    os.makedirs(extract_dir, exist_ok=True)
-
-    zip_path = os.path.join(tmp_dir, 'import.zip')
-    file_storage.save(zip_path)
+    tmp = tempfile.mkdtemp()
+    ed = os.path.join(tmp, 'extracted')
+    os.makedirs(ed, exist_ok=True)
+    file_storage.save(os.path.join(tmp, 'import.zip'))
 
     try:
-        with zipfile.ZipFile(zip_path, 'r') as zf:
-            zf.extractall(extract_dir)
+        with zipfile.ZipFile(os.path.join(tmp, 'import.zip')) as zf: zf.extractall(ed)
 
-        jar_files = []
-        for root, dirs, files in os.walk(extract_dir):
+        jars = []
+        for root, dirs, files in os.walk(ed):
             for f in files:
                 if f.endswith('.jar'):
-                    rel = os.path.relpath(root, extract_dir)
-                    jar_files.append(os.path.join(rel, f) if rel != '.' else f)
+                    r = os.path.relpath(root, ed)
+                    jars.append(os.path.join(r, f) if r != '.' else f)
 
-        if not jar_files:
-            shutil.rmtree(tmp_dir)
-            return None, 'No .jar file found in the zip archive'
+        if not jars: shutil.rmtree(tmp); return None, 'No .jar file found in the zip archive'
 
-        jar_candidates = [j for j in jar_files if any(kw in j.lower() for kw in ['server', 'paper', 'purpur', 'spigot', 'vanilla', 'fabric', 'quilt', 'forge', 'neoforge', 'minecraft_server'])]
+        jc = [j for j in jars if any(kw in j.lower() for kw in
+             ['server', 'paper', 'purpur', 'spigot', 'vanilla', 'fabric', 'quilt', 'forge', 'neoforge', 'minecraft_server'])]
+        jf = (jc or jars)[0]
 
-        if jar_candidates:
-            jar_file = jar_candidates[0]
-        else:
-            jar_file = jar_files[0]
+        dt = 'vanilla'
+        for kw, t in [('paper', 'paper'), ('folia', 'folia'), ('purpur', 'purpur'),
+                       ('fabric', 'fabric'), ('quilt', 'quilt'), ('forge', 'forge'), ('neoforge', 'neoforge')]:
+            if kw in jf.lower(): dt = t; break
 
-        jar_lower = jar_file.lower()
-        if 'paper' in jar_lower:
-            detected_type = 'paper'
-        elif 'folia' in jar_lower:
-            detected_type = 'folia'
-        elif 'purpur' in jar_lower:
-            detected_type = 'purpur'
-        elif 'fabric' in jar_lower:
-            detected_type = 'fabric'
-        elif 'quilt' in jar_lower:
-            detected_type = 'quilt'
-        elif 'forge' in jar_lower:
-            detected_type = 'forge'
-        elif 'neoforge' in jar_lower:
-            detected_type = 'neoforge'
-        else:
-            detected_type = 'vanilla'
+        sn = server_name or (os.path.basename(jf).replace('.jar', '') or 'Imported Server')
+        sp = safe_path(SERVERS_DIR, sn)
+        if os.path.exists(sp): shutil.rmtree(tmp); return None, f'Server directory {os.path.basename(sp)} already exists'
 
-        if not server_name:
-            base = os.path.basename(jar_file).replace('.jar', '')
-            server_name = base if base else 'Imported Server'
+        shutil.copytree(ed, sp)
+        el = safe_join(sp, 'eula.txt')
+        if not os.path.isfile(el): safe_write(el, 'eula=true\n')
 
-        server_path = safe_path(SERVERS_DIR, server_name)
+        sid = create_server(name=sn, path=sp, jar_file=jf, server_type=dt)
+        shutil.rmtree(tmp)
+        return sid, None
 
-        if os.path.exists(server_path):
-            shutil.rmtree(tmp_dir)
-            return None, f'Server directory {os.path.basename(server_path)} already exists'
-
-        shutil.copytree(extract_dir, server_path)
-
-        eula_path = safe_join(server_path, 'eula.txt')
-        if not os.path.isfile(eula_path):
-            safe_write(eula_path, 'eula=true\n')
-
-        jar_rel_path = jar_file
-
-        server_id = create_server(
-            name=server_name,
-            path=server_path,
-            jar_file=jar_rel_path,
-            server_type=detected_type
-        )
-
-        shutil.rmtree(tmp_dir)
-        return server_id, None
-
-    except zipfile.BadZipFile:
-        shutil.rmtree(tmp_dir)
-        return None, 'Invalid zip file'
-    except Exception:
-        shutil.rmtree(tmp_dir)
-        return None, 'Import failed'
+    except zipfile.BadZipFile: shutil.rmtree(tmp); return None, 'Invalid zip file'
+    except: shutil.rmtree(tmp); return None, 'Import failed'
