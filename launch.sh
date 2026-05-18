@@ -98,6 +98,22 @@ pip install -r requirements.txt -q
 
 info "All dependencies installed."
 
+# --- Build static assets ---
+if command -v node &>/dev/null; then
+  if [ -f "static/js/windfall.min.js" ]; then
+    info "Static assets already built."
+  else
+    if [ ! -f "node_modules/esbuild/package.json" ]; then
+      info "Installing Node.js dependencies for asset build..."
+      npm install 2>/dev/null || true
+    fi
+    if [ -f "node_modules/esbuild/package.json" ]; then
+      info "Building static assets..."
+      npm run build 2>/dev/null || printf ""
+    fi
+  fi
+fi
+
 # --- Autostart setup ---
 SERVICE_NAME="windfall-ecu"
 SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE_NAME.service"

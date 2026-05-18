@@ -1,0 +1,11 @@
+{
+  "name": "windfall-ecu",
+  "private": true,
+  "scripts": {
+    "build": "./build.sh"
+  },
+  "devDependencies": {
+    "csso": "^5.0.5",
+    "esbuild": "^0.28.0"
+  }
+}

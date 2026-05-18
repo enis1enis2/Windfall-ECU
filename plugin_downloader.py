@@ -1,4 +1,4 @@
-import os, requests
+import os, json, requests
 from path_util import safe_join
 
 MODRINTH_API, HANGAR_API = 'https://api.modrinth.com/v2', 'https://hangar.papermc.io/api/v1'
@@ -13,7 +13,7 @@ _HANGAR_PLATFORM = {k.upper(): k for k in ['bukkit', 'paper', 'purpur', 'spigot'
 
 def _modrinth_search(query, loaders=None, limit=24):
     params = {'query': query, 'limit': limit}
-    if loaders: params['facets'] = __import__('json').dumps([[f'categories:{l}' for l in loaders]])
+    if loaders: params['facets'] = json.dumps([[f'categories:{l}' for l in loaders]])
     d = requests.get(f'{MODRINTH_API}/search', params=params, timeout=TIMEOUT).json()
     return [{
         'provider': 'modrinth', 'id': h['project_id'], 'slug': h['slug'], 'name': h['title'],

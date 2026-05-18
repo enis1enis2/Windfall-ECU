@@ -6,7 +6,7 @@ import threading
 import time
 import shlex
 from collections import deque
-from config import JAVA_BIN, SERVERS_DIR
+from config import JAVA_BIN
 
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
 MC_COLOR_RE = re.compile(r'§[0-9a-fklmnor]')
@@ -50,9 +50,7 @@ class ServerProcess:
         self.running = False
         self.output_callback = None
         self.read_thread = None
-        self.log_thread = None
         self.buffer = ConsoleBuffer()
-        self.log_pos = 0
         self._stop_event = threading.Event()
 
     def start(self):
@@ -76,13 +74,9 @@ class ServerProcess:
 
         self.running = True
         self._stop_event.clear()
-        self.log_pos = 0
 
         self.read_thread = threading.Thread(target=self._read_stdout, daemon=True)
         self.read_thread.start()
-
-        self.log_thread = threading.Thread(target=self._tail_log, daemon=True)
-        self.log_thread.start()
 
         return True
 
@@ -99,20 +93,6 @@ class ServerProcess:
             except (OSError, ValueError):
                 break
         self.running = False
-
-    def _tail_log(self):
-        log_file = os.path.join(self.workdir, 'logs', 'latest.log')
-        while not self._stop_event.is_set():
-            if os.path.isfile(log_file):
-                try:
-                    with open(log_file, 'r', errors='replace') as f:
-                        f.seek(self.log_pos)
-                        for line in f:
-                            self.buffer.append(clean_output(line))
-                        self.log_pos = f.tell()
-                except (OSError, PermissionError):
-                    pass
-            self._stop_event.wait(0.5)
 
     def write_input(self, data):
         if self.process and self.process.stdin and self.running:
@@ -171,8 +151,6 @@ def unregister_server(server_id):
             proc.stop()
         del _servers[server_id]
 
-def get_server_path(server_id, server_name):
-    safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in server_name)
-    return os.path.join(SERVERS_DIR, safe_name)
+
 
 

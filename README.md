@@ -24,7 +24,7 @@
 ## Features
 
 - **Server Lifecycle** — Start, stop, restart, and delete servers with a single click
-- **Web Terminal** — Live server console via WebSocket + xterm.js with polling fallback
+- **Web Terminal** — Pterodactyl-style live console: read-only xterm.js display, dedicated command input bar with `>` prompt, real-time WebSocket + polling fallback, connection status dot
 - **File Manager** — Browse, edit, upload, and delete server files
 - **Backup System** — Create, restore, and delete `.tar.gz` backups
 - **Auto Backup** — Scheduled backups with customizable interval and retention
@@ -34,7 +34,7 @@
 - **ZIP Import** — Import existing server directories via drag-and-drop ZIP upload
 - **Server Properties Editor** — Edit `server.properties` directly from the UI
 - **Authentication** — Login/register system with session-based auth
-- **Dark/Light Theme** — Toggle between dark and light mode
+- **Dark/Light Theme** — Toggle between dark and light mode; terminal 16-color ANSI palette adapts per theme
 - **Docker Support** — Run servers in isolated Docker containers
 - **EULA Auto-Create** — `eula=true` written automatically on server creation
 - **Launch Arguments** — Customize JVM arguments per server
@@ -50,7 +50,9 @@
 | Linux / macOS | `./launch.sh` |
 | Windows | Double-click `launch.bat` |
 
-The script installs Python and Java if missing, creates a virtual environment, installs dependencies, optionally sets up autostart, and launches the panel.
+The script installs Python and Java if missing, creates a virtual environment, installs dependencies, optionally sets up autostart, and launches the panel. If `node` is available, static assets are built automatically.
+
+> 💡 For the fastest possible experience, ensure Node.js 18+ is installed (tested on 26.1) — JS files are bundled and minified via esbuild, CSS via csso, and all text responses are gzip-compressed.
 
 ---
 
@@ -60,6 +62,10 @@ The script installs Python and Java if missing, creates a virtual environment, i
 # Clone the repository
 git clone https://github.com/enis1enis2/GreatPanel.git
 cd GreatPanel
+
+# (Optional) Build optimized static assets
+# Requires Node.js 18+ — JS is bundled via esbuild, CSS via csso
+npm install && npm run build
 
 # Create and activate a virtual environment
 python3 -m venv .venv
@@ -78,6 +84,8 @@ Open **http://localhost:8080** in your browser and log in with:
 > **Username:** `admin` · **Password:** `admin`
 
 > ⚠️ Change the default password after first login!
+
+> 💡 The app works without the build step using the original JS/CSS files. `npm run build` bundles 7 JS files into 1 via esbuild, minifies CSS via csso. All text responses are gzip-compressed automatically. The terminal layout is Pterodactyl-inspired: read-only xterm display with a dedicated command input bar.
 
 ---
 
@@ -173,7 +181,9 @@ All endpoints except auth require authentication via session cookie.
 ## Stack
 
 - **Backend:** Flask, Flask-SocketIO, SQLite, Eventlet
-- **Frontend:** Vanilla JavaScript, xterm.js, Socket.IO client
+- **Frontend:** Vanilla JavaScript (bundled via esbuild), xterm.js (read-only terminal + command input bar), Socket.IO client
+- **Build:** esbuild (JS bundling + minify), csso (CSS minify)
+- **Compression:** Automatic gzip for HTML/CSS/JS/JSON responses
 - **Container:** Docker / Docker Compose
 
 ---

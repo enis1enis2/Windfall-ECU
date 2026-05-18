@@ -2,26 +2,34 @@
 
 ## Stack
 - **Backend**: Flask, Flask-SocketIO (eventlet async), SQLite, Werkzeug
-- **Frontend**: Vanilla JS, xterm.js, Socket.IO client, no framework
+- **Frontend**: Vanilla JS (bundled to single file), xterm.js, Socket.IO client
+- **Build**: esbuild (JS bundle + minify), csso (CSS minify)
+- **Compression**: Automatic gzip for HTML/CSS/JS/JSON > 200 bytes
 - **No tests, no linter, no type checker, no formatter** configured
 
 ## Run
 ```bash
+# With static build (requires Node.js 18+, tested on 26.1):
+npm install && npm run build
+pip install -r requirements.txt
+python app.py
+
+# Without build (uses raw JS/CSS):
 pip install -r requirements.txt
 python app.py
 ```
 Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 
-> Use `setsid python3 app.py` or Docker to keep the server alive after the shell exits. The startup script kills leftover processes on port 8080 via `fuser`/`lsof`.
+> Use `setsid python3 app.py` or Docker to keep the server alive after the shell exits. The startup script kills leftover processes on port 8080 via `fuser`/`lsof`. Launch scripts auto-detect Node.js and build assets on first run.
 
 ## Structure
 | Path | Purpose |
 |------|---------|
-| `app.py` | Routes, server lifecycle, auth, all REST API handlers |
+| `app.py` | Routes, server lifecycle, auth, all REST API handlers, gzip compression |
 | `config.py` | Env-based config (`GREATPANEL_HOST`, `PORT`, `SECRET`, `JAVA`, `ORIGIN`) |
 | `models.py` | SQLite ORM (servers, backups, settings, users tables) |
 | `auth.py` | Session-based auth, default `admin`/`admin` user created on first run, user CRUD, role-based permission system (admin/operator/viewer) |
-| `server_manager.py` | `ServerProcess` class — spawns Java via `subprocess.Popen`, console buffer, log tailing |
+| `server_manager.py` | `ServerProcess` class — spawns Java via `subprocess.Popen`, console buffer, console output (stdout only) |
 | `server_downloader.py` | Downloads Paper/Folia/Purpur/Vanilla/Fabric/Quilt/Forge/NeoForge JARs |
 | `plugin_downloader.py` | Plugin search from Modrinth & Hangar; install only from Modrinth |
 | `backup_manager.py` | tar.gz backup/restore per server |
@@ -30,7 +38,12 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `auto_backup.py` | Background scheduler for automatic backups (customizable interval, retention, enable/disable) |
 | `docker_manager.py` | Docker container lifecycle (build/run/stop) |
 | `zip_importer.py` | ZIP import with server type detection from JAR filename |
-| `static/js/*.js` | One JS file per feature (app, backups, download, filemanager, import, plugins, terminal) |
+| `path_util.py` | Shared path safety (`safe_join`, `safe_path`, `safe_write`, `sanitize_name`) |
+| `build.sh` | Static asset build script (bundles JS via esbuild, minifies CSS via csso) |
+| `package.json` | Node.js dev dependencies (esbuild, csso) + `npm run build` |
+| `static/js/windfall.min.js` | All 7 JS files bundled and minified into one (39 KB) |
+| `static/css/style.min.css` | Minified CSS (15 KB) |
+| `static/js/*.js` | Individual JS source files (app, backups, download, filemanager, import, plugins, terminal) |
 | `templates/login.html` / `index.html` | Two Jinja2 templates |
 
 ## Key conventions
@@ -41,6 +54,11 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - File paths are always sanitized and checked against a base path prefix to prevent traversal.
 - `SERVERS_DIR`/`BACKUPS_DIR` created on startup, entries are gitignored.
 - `eula=true` written automatically on every server creation.
+- Static assets are built via `npm run build` (`build.sh`). The app falls back to source files if built files are missing.
+- Launch scripts (`launch.sh`/`launch.bat`) auto-build if Node.js is detected.
+- All text responses (HTML/CSS/JS/JSON) are gzip-compressed via `app.py:after_request`.
+- `index.html` references `windfall.min.js` and `style.min.css` instead of 7 separate JS files.
+- Terminal redesigned to Pterodactyl-style layout: read-only xterm display, command input bar at bottom with `>` prompt, connection status dot indicator, no status bar. Terminal theme reads from CSS variables and respects light/dark mode (16 ANSI colors per theme, Pterodactyl-inspired palettes).
 
 ## Env vars
 `GREATPANEL_SECRET`, `GREATPANEL_HOST`, `GREATPANEL_PORT`, `GREATPANEL_JAVA`, `GREATPANEL_ORIGIN`
@@ -49,4 +67,4 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 ```bash
 docker compose up -d
 ```
-Dockerfile uses `python:3.12-slim` with OpenJDK 21 JRE.
+Dockerfile uses multi-stage build: Node.js 22 builder produces minified assets, then `python:3.12-slim` with OpenJDK 21 JRE runs the app.

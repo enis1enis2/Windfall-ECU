@@ -1,5 +1,5 @@
 import eventlet; eventlet.monkey_patch()
-import os, json, shutil, subprocess as _sp, psutil
+import os, json, shutil, subprocess as _sp, psutil, gzip, time
 from flask import Flask, render_template, request, jsonify, send_file, abort, session
 from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
@@ -35,6 +35,26 @@ for cmd in [['fuser', '-k', f'{PORT}/tcp'], ['lsof', '-ti', f'tcp:{PORT}']]:
     except: pass
 
 init_db(); init_auth(); setup_terminal_handlers(socketio); start_auto_backup_scheduler()
+
+# --- Compression & caching ---
+COMPRESS_TYPES = {'text/html', 'text/css', 'application/javascript', 'application/json',
+                  'text/javascript', 'text/plain', 'application/xml'}
+@app.after_request
+def _compress(resp):
+    if resp.status_code < 200 or resp.status_code >= 300: return resp
+    if 'gzip' not in request.headers.get('Accept-Encoding', ''): return resp
+    ct = resp.content_type or ''
+    if not any(t in ct for t in COMPRESS_TYPES): return resp
+    if resp.content_length and resp.content_length > 200 and resp.is_sequence:
+        resp.direct_passthrough = False
+        resp.set_data(gzip.compress(resp.get_data()))
+        resp.headers['Content-Encoding'] = 'gzip'
+        resp.headers['Content-Length'] = str(len(resp.get_data()))
+    return resp
+
+@app.context_processor
+def _inject_ts():
+    return {'static_ts': int(time.time())}
 
 # --- Helpers ---
 def get_srv(server_id):
@@ -320,12 +340,12 @@ def api_import_zip():
 @login_required
 @require_permission('servers:console')
 def api_console(server_id):
-    get_srv(server_id)
+    s = get_srv(server_id)
     p = get_server_process(server_id); running = bool(p and p.is_running)
     since = request.args.get('since', 0, type=int); output = ''; total = 0
     if p: output, total = p.buffer.get_since(since)
     else:
-        lf = os.path.join(get_server(server_id)['path'], 'logs', 'latest.log')
+        lf = os.path.join(s['path'], 'logs', 'latest.log')
         if os.path.isfile(lf):
             try:
                 fs = os.path.getsize(lf); mx = 5 * 1024 * 1024
@@ -402,8 +422,8 @@ def api_download():
 @require_permission('servers:upgrade')
 def api_server_upgrade(server_id):
     s = get_srv(server_id)
-    if get_server_process(server_id) and get_server_process(server_id).is_running:
-        return jsonify({'error': 'Stop the server before upgrading'}), 400
+    p = get_server_process(server_id)
+    if p and p.is_running: return jsonify({'error': 'Stop the server before upgrading'}), 400
     st = s['server_type']
     vs = get_versions(st)
     if not vs: return jsonify({'error': f'No versions found for {st}'}), 400

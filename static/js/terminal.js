@@ -2,49 +2,63 @@ let terminalState = { socket: null, term: null, pollTimer: null, since: 0, serve
 
 async function loadTerminal(serverId) {
   cleanupTerminal();
-
   const container = document.getElementById('terminal-container');
   terminalState.serverId = serverId;
-
   const server = servers.find(s => s.id === serverId);
   if (!server || !server.status || !server.status.running) {
     container.innerHTML = `
       <div class="empty-state">
         <p>Server is offline</p>
-        <p style="font-size:12px;margin-top:4px">Start the server to access the terminal</p>
+        <p style="font-size:12px;margin-top:4px;color:var(--text-dim)">Start the server to access the console</p>
       </div>`;
     return;
   }
-
   container.innerHTML = `
-    <div class="terminal-status-bar" id="term-status">Loading...</div>
-    <div id="xterm-container" style="height:calc(100% - 28px)"></div>`;
+    <div id="xterm-wrap" style="flex:1;overflow:hidden;position:relative">
+      <div id="xterm-container" style="height:100%"></div>
+    </div>
+    <div class="console-bar">
+      <span class="console-prompt">&gt;</span>
+      <input type="text" id="console-input" placeholder="Type a command..." autocomplete="off" spellcheck="false">
+      <span class="console-status" id="console-status">&bull;</span>
+    </div>`;
 
+  const xtermEl = document.getElementById('xterm-container');
+  const s = getComputedStyle(document.documentElement);
+  const css = p => s.getPropertyValue(p).trim();
   const term = new Terminal({
-    cursorBlink: true,
-    cursorStyle: 'block',
-    fontSize: 14,
-    fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+    cursorBlink: true, cursorStyle: 'block', fontSize: 13,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+    disableStdin: true, convertEol: true, cols: 80, rows: 24,
     theme: {
-      background: '#0d1117', foreground: '#c9d1d9', cursor: '#e94560',
-      selection: 'rgba(233,69,96,0.3)',
-      black: '#484f58', red: '#ff7b72', green: '#3fb950', yellow: '#d29922',
-      blue: '#58a6ff', magenta: '#bc8cff', cyan: '#39c5cf', white: '#b1bac4',
+      background: css('--terminal-bg'), foreground: css('--term-fg'), cursor: css('--term-cursor'),
+      selectionBackground: css('--term-selection'),
+      black: css('--term-black'), red: css('--term-red'), green: css('--term-green'),
+      yellow: css('--term-yellow'), blue: css('--term-blue'), magenta: css('--term-magenta'),
+      cyan: css('--term-cyan'), white: css('--term-white'),
+      brightBlack: css('--term-bright-black'), brightRed: css('--term-bright-red'),
+      brightGreen: css('--term-bright-green'), brightYellow: css('--term-bright-yellow'),
+      brightBlue: css('--term-bright-blue'), brightMagenta: css('--term-bright-magenta'),
+      brightCyan: css('--term-bright-cyan'), brightWhite: css('--term-bright-white'),
     },
-    rows: Math.floor(container.clientHeight / 20) || 24,
-    cols: Math.floor(container.clientWidth / 9) || 80,
-    convertEol: true,
   });
-
-  term.open(document.getElementById('xterm-container'));
+  term.open(xtermEl);
   terminalState.term = term;
 
-  term.onData(data => {
-    sendCommand(serverId, data);
+  const input = document.getElementById('console-input');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const cmd = input.value;
+      if (cmd.trim()) {
+        sendCommand(serverId, cmd + '\n');
+        term.write(`\x1b[90m> ${cmd}\x1b[0m\r\n`);
+        input.value = '';
+      }
+    }
   });
+  input.focus();
 
   await fetchConsole(serverId, term);
-
   tryConnectSocket(serverId, term);
 }
 
@@ -55,75 +69,50 @@ function sendCommand(serverId, data) {
 }
 
 function cleanupTerminal() {
-  if (terminalState.pollTimer) {
-    clearInterval(terminalState.pollTimer);
-    terminalState.pollTimer = null;
-  }
-  if (terminalState.socket) {
-    terminalState.socket.disconnect();
-    terminalState.socket = null;
-  }
-  if (terminalState.term) {
-    terminalState.term.dispose();
-    terminalState.term = null;
-  }
-  terminalState.since = 0;
-  terminalState.serverId = null;
-  terminalState.wsConnected = false;
+  if (terminalState.pollTimer) { clearInterval(terminalState.pollTimer); terminalState.pollTimer = null; }
+  if (terminalState.socket) { terminalState.socket.disconnect(); terminalState.socket = null; }
+  if (terminalState.term) { terminalState.term.dispose(); terminalState.term = null; }
+  terminalState.since = 0; terminalState.serverId = null; terminalState.wsConnected = false;
+  const s = document.getElementById('console-status');
+  if (s) { s.className = 'console-status'; s.textContent = '\u25CF'; }
 }
 
 async function fetchConsole(serverId, term) {
   try {
     const data = await api('GET', `/servers/${serverId}/console?since=0`);
-    if (data.output) {
-      term.write(data.output);
-    }
+    if (data.output) term.write(data.output);
     terminalState.since = data.total || 0;
-    setTermStatus(data.running ? 'Connected' : 'Stopped', data.running ? 'connected' : '');
-  } catch (e) {
-    setTermStatus('Error', 'error');
-  }
+    setConnected(data.running);
+    if (data.running) document.getElementById('console-input').focus();
+  } catch { setConnected(false); }
 }
 
 function tryConnectSocket(serverId, term) {
   const socket = io({
-    transports: ['websocket', 'polling'],
-    reconnection: true,
-    reconnectionDelay: 1000,
+    transports: ['websocket', 'polling'], reconnection: true, reconnectionDelay: 1000,
   });
-
   socket.on('connect_error', () => {
-    terminalState.wsConnected = false;
+    terminalState.wsConnected = false; setConnected(false);
     startPolling(serverId, term);
-    setTermStatus('Polling (no WebSocket)', 'polling');
   });
-
   socket.on('connect', () => {
-    terminalState.wsConnected = true;
-    stopPolling();
-    setTermStatus('WebSocket live', 'connected');
+    terminalState.wsConnected = true; stopPolling(); setConnected(true);
     socket.emit('connect_terminal', { server_id: serverId });
+    document.getElementById('console-input').focus();
   });
-
-  socket.on('terminal_output', (data) => {
-    if (data && data.data) {
-      term.write(data.data);
-    }
+  socket.on('terminal_output', data => {
+    if (data && data.data) { term.write(data.data); }
   });
-
   socket.on('disconnect', () => {
-    terminalState.wsConnected = false;
+    terminalState.wsConnected = false; setConnected(false);
     startPolling(serverId, term);
-    setTermStatus('Polling (disconnected)', 'polling');
   });
-
-  term.onData(data => {
-    if (socket && socket.connected) {
-      socket.emit('terminal_input', { server_id: serverId, data });
-    }
-  });
-
   terminalState.socket = socket;
+}
+
+function setConnected(yes) {
+  const s = document.getElementById('console-status');
+  if (s) { s.textContent = yes ? '\u25CF' : '\u25CB'; s.className = 'console-status' + (yes ? ' live' : ''); }
 }
 
 function startPolling(serverId, term) {
@@ -132,35 +121,14 @@ function startPolling(serverId, term) {
 }
 
 function stopPolling() {
-  if (terminalState.pollTimer) {
-    clearInterval(terminalState.pollTimer);
-    terminalState.pollTimer = null;
-  }
+  if (terminalState.pollTimer) { clearInterval(terminalState.pollTimer); terminalState.pollTimer = null; }
 }
 
 async function pollConsole(serverId, term) {
-  if (terminalState.wsConnected) {
-    stopPolling();
-    return;
-  }
+  if (terminalState.wsConnected) { stopPolling(); return; }
   try {
     const data = await api('GET', `/servers/${serverId}/console?since=${terminalState.since}`);
-    if (data.output) {
-      term.write(data.output);
-      terminalState.since = data.total || terminalState.since;
-    }
-    if (!data.running) {
-      setTermStatus('Server stopped', '');
-    }
-  } catch (e) {
-    // ignore
-  }
-}
-
-function setTermStatus(text, cls) {
-  const bar = document.getElementById('term-status');
-  if (bar) {
-    bar.textContent = text;
-    bar.className = 'terminal-status-bar' + (cls ? ' ' + cls : '');
-  }
+    if (data.output) { term.write(data.output); terminalState.since = data.total || terminalState.since; }
+    setConnected(data.running);
+  } catch {}
 }

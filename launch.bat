@@ -90,6 +90,21 @@ pip install -r requirements.txt -q
 
 call :info "All dependencies installed."
 
+:: --- Build static assets ---
+where npm 2>nul >nul
+if !errorlevel! equ 0 (
+    if not exist "static\js\windfall.min.js" (
+        if not exist "node_modules\esbuild" (
+            call :info "Installing Node.js dependencies for asset build..."
+            npm install 2>nul
+        )
+        if exist "node_modules\esbuild" (
+            call :info "Building static assets (npm run build)..."
+            npm run build 2>nul
+        )
+    )
+)
+
 :: --- Autostart setup ---
 call :confirm "Add Windfall ECU to startup (Windows Startup folder)?"
 if !errorlevel! equ 0 (
