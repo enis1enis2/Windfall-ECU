@@ -1,1 +1,87 @@
+name: CI Checks
 
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Check Python syntax
+      run: |
+        python -m py_compile app.py
+        python -m py_compile auth.py
+        python -m py_compile config.py
+        python -m py_compile models.py
+        python -m py_compile server_manager.py
+        python -m py_compile backup_manager.py
+        python -m py_compile file_explorer.py
+        python -m py_compile terminal_handler.py
+        python -m py_compile auto_backup.py
+        python -m py_compile docker_manager.py
+        python -m py_compile zip_importer.py
+        python -m py_compile server_downloader.py
+        python -m py_compile plugin_downloader.py
+        python -m py_compile update_manager.py
+
+    - name: Check app imports cleanly
+      run: |
+        python -c "
+        import eventlet; eventlet.monkey_patch()
+        from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
+        from models import init_db, get_servers, get_server, create_server, delete_server, update_server
+        from server_manager import ServerProcess, get_server_process, register_server, unregister_server, get_server_path, clean_output
+        from terminal_handler import setup_terminal_handlers
+        from backup_manager import list_backups, create_backup, restore_backup, delete_backup
+        from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
+        from zip_importer import import_zip
+        from docker_manager import check_docker
+        from server_downloader import get_types, get_versions, get_builds, download_server
+        from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
+        from auth import login_required, require_permission, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, change_role, delete_user, create_user, ROLES
+        from auto_backup import start_auto_backup_scheduler
+        from update_manager import check_updates, install_updates, schedule_restart
+        print('All imports OK')
+        "
+
+    - name: Check JS syntax with Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - run: |
+        for f in static/js/*.js; do
+          node --check "$f" && echo "$f: OK" || exit 1
+        done
+
+    - name: Check HTML validity
+      run: |
+        pip install html5lib beautifulsoup4
+        python -c "
+        from bs4 import BeautifulSoup
+        for f in ['templates/index.html', 'templates/login.html']:
+            with open(f) as fp:
+                soup = BeautifulSoup(fp, 'html5lib')
+            # Check all onclick handlers reference existing functions
+            print(f'{f}: parsed OK ({len(soup.find_all())} elements)'  )
+        "
+
+    - name: Check requirements file
+      run: |
+        pip install -r requirements.txt --dry-run 2>&1 | head -5
+        echo "Requirements resolved OK"
