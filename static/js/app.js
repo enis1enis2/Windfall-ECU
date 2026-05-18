@@ -408,16 +408,16 @@ function toggleTheme() {
   const current = html.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
+  const btn = document.querySelector('.theme-toggle-btn');
+  if (btn) btn.textContent = next === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode';
   localStorage.setItem('windfall-ecu-theme', next);
 }
 
 function loadTheme() {
   const saved = localStorage.getItem('windfall-ecu-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  const btn = document.querySelector('.theme-toggle-btn');
+  if (btn) btn.textContent = saved === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode';
 }
 
 /* Tab click handlers */
@@ -460,6 +460,58 @@ function logoutUser() {
   });
 }
 
+/* Panel Auto-Update */
+let updateInterval = null;
+
+async function checkForUpdates() {
+  try {
+    const data = await api('GET', '/update/check');
+    const btn = document.getElementById('update-btn');
+    if (data.update_available) {
+      btn.style.display = '';
+      btn.title = `Update available (${data.commits_behind} commit${data.commits_behind > 1 ? 's' : ''} behind)`;
+    } else {
+      btn.style.display = 'none';
+    }
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function openUpdateModal() {
+  const modal = document.getElementById('update-modal');
+  document.getElementById('update-install-btn').style.display = '';
+  document.getElementById('update-installing').style.display = 'none';
+  document.getElementById('update-commit-log').style.display = '';
+  modal.classList.remove('hidden');
+  checkForUpdates().then(data => {
+    if (data && data.log) {
+      document.getElementById('update-commit-log').textContent = data.log;
+    }
+  });
+}
+
+function closeUpdateModal() {
+  document.getElementById('update-modal').classList.add('hidden');
+}
+
+async function installUpdate() {
+  document.getElementById('update-install-btn').style.display = 'none';
+  document.getElementById('update-installing').style.display = '';
+  document.getElementById('update-commit-log').style.display = 'none';
+  try {
+    await api('POST', '/update/install');
+    document.getElementById('update-installing').textContent = 'Restarting panel...';
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    document.getElementById('update-installing').style.display = 'none';
+    document.getElementById('update-install-btn').style.display = '';
+    document.getElementById('update-commit-log').style.display = '';
+    notify(e.message, 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const zone = document.getElementById('import-zone');
   zone.addEventListener('click', () => {
@@ -486,6 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
       notify('Please drop a .zip file', 'error');
     }
   });
+
+  /* Panel auto-update polling */
+  checkForUpdates();
+  updateInterval = setInterval(checkForUpdates, 60000);
 
   /* Modal overlay click-dismiss */
   document.querySelectorAll('.modal-overlay').forEach(el => {

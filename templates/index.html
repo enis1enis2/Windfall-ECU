@@ -64,6 +64,7 @@
       <!-- Theme Control Footer Toggle -->
       <div class="sidebar-footer">
         <button class="theme-toggle-btn" onclick="toggleTheme()">🌙 Dark Mode</button>
+        <button class="update-indicator" id="update-btn" onclick="openUpdateModal()" style="display:none" title="Update available">🔄</button>
       </div>
     </aside>
 
@@ -200,6 +201,20 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
         <button class="btn btn-success" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Modal -->
+  <div class="modal-overlay hidden" id="update-modal">
+    <div class="modal">
+      <h3>Panel Update Available</h3>
+      <p class="modal-subtitle">New commits are available on GitHub.</p>
+      <div id="update-commit-log" style="background:var(--terminal-bg, #000);padding:12px;border-radius:6px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:200px;overflow:auto;margin-bottom:16px"></div>
+      <div id="update-installing" style="display:none;color:var(--accent);margin-bottom:16px">Installing update...</div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeUpdateModal()">Later</button>
+        <button class="btn btn-success" id="update-install-btn" onclick="installUpdate()">Update & Restart</button>
       </div>
     </div>
   </div>

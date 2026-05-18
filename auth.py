@@ -18,7 +18,7 @@ ROLES = {
             'download:types', 'download:versions', 'download:builds', 'download:create',
             'import:zip',
             'settings:read', 'settings:write',
-            'system:docker',
+            'system:docker', 'system:update',
             'users:manage',
         }
     },

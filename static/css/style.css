@@ -264,10 +264,34 @@ body {
   padding: 16px;
   border-top: 1px solid var(--border);
   background: rgba(125, 125, 125, 0.02);
+  display: flex;
+  gap: 8px;
+}
+
+.sidebar-footer .theme-toggle-btn {
+  flex: 1;
+}
+
+.sidebar-footer .update-indicator {
+  width: 40px;
+  flex: 0 0 40px;
+  padding: 10px 0;
+  background: var(--warning);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #000;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  animation: pulse-update 2s ease-in-out infinite;
+}
+
+@keyframes pulse-update {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .theme-toggle-btn {
-  width: 100%;
   padding: 10px;
   background: var(--card);
   border: 1px solid var(--border);
