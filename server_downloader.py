@@ -6,6 +6,7 @@ import zipfile
 import io
 import shutil
 from config import SERVERS_DIR
+from path_util import safe_join, safe_path, safe_write
 
 PAPER_API = 'https://api.papermc.io/v2/projects/paper'
 FOLIA_API = 'https://api.papermc.io/v2/projects/folia'
@@ -309,17 +310,17 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name, server_
     if not server_url:
         return None, 'No server download URL found'
 
-    tmp = os.path.join(SERVERS_DIR, f'_dl_{version.replace(".", "_")}')
+    tmp = safe_join(SERVERS_DIR, f'_dl_{version.replace(".", "_")}')
     os.makedirs(tmp, exist_ok=True)
 
     try:
-        jar_path = os.path.join(tmp, jar_name)
+        jar_path = safe_join(tmp, jar_name)
         r = requests.get(server_url, timeout=120)
         r.raise_for_status()
         with open(jar_path, 'wb') as f:
             f.write(r.content)
 
-        libs_dir = os.path.join(tmp, 'libraries')
+        libs_dir = safe_join(tmp, 'libraries')
         os.makedirs(libs_dir, exist_ok=True)
         for lib in meta.get('libraries', []):
             try:
@@ -328,25 +329,23 @@ def _download_fabric_quilt_jar(meta_url, jar_name, version, server_name, server_
                     if lib_url:
                         lr = requests.get(lib_url, timeout=30)
                         lr.raise_for_status()
-                        lib_name = lib_url.split('/')[-1]
-                        with open(os.path.join(libs_dir, lib_name), 'wb') as lf:
+                        lib_name = lib_url.split('/')[-1].replace('../', '').replace('..\\', '')
+                        with open(safe_join(libs_dir, lib_name), 'wb') as lf:
                             lf.write(lr.content)
             except Exception:
                 pass
 
-        safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in server_name)
-        server_path = os.path.join(SERVERS_DIR, safe_name)
+        server_path = safe_path(SERVERS_DIR, server_name)
         if os.path.exists(server_path):
             shutil.rmtree(tmp)
-            return None, f'Server "{safe_name}" already exists'
+            return None, f'Server "{os.path.basename(server_path)}" already exists'
 
         shutil.copytree(tmp, server_path)
         shutil.rmtree(tmp)
 
-        eula_path = os.path.join(server_path, 'eula.txt')
+        eula_path = safe_join(server_path, 'eula.txt')
         if not os.path.isfile(eula_path):
-            with open(eula_path, 'w') as f:
-                f.write('eula=true\n')
+            safe_write(eula_path, 'eula=true\n')
 
         from models import create_server
         server_id = create_server(name=server_name, path=server_path, jar_file=jar_name,
@@ -388,30 +387,28 @@ def _download_neoforge(version, server_name, server_type='neoforge'):
 
 
 def _download_and_create_server(jar_url, jar_name, version, server_name, server_type='vanilla'):
-    tmp = os.path.join(SERVERS_DIR, f'_dl_{version.replace(".", "_")}')
+    tmp = safe_join(SERVERS_DIR, f'_dl_{version.replace(".", "_")}')
     os.makedirs(tmp, exist_ok=True)
 
     try:
-        jar_path = os.path.join(tmp, jar_name)
+        jar_path = safe_join(tmp, jar_name)
         r = requests.get(jar_url, stream=True, timeout=120)
         r.raise_for_status()
         with open(jar_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
 
-        safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in server_name)
-        server_path = os.path.join(SERVERS_DIR, safe_name)
+        server_path = safe_path(SERVERS_DIR, server_name)
         if os.path.exists(server_path):
             shutil.rmtree(tmp)
-            return None, f'Server "{safe_name}" already exists'
+            return None, f'Server "{os.path.basename(server_path)}" already exists'
 
         shutil.copytree(tmp, server_path)
         shutil.rmtree(tmp)
 
-        eula_path = os.path.join(server_path, 'eula.txt')
+        eula_path = safe_join(server_path, 'eula.txt')
         if not os.path.isfile(eula_path):
-            with open(eula_path, 'w') as f:
-                f.write('eula=true\n')
+            safe_write(eula_path, 'eula=true\n')
 
         from models import create_server
         server_id = create_server(name=server_name, path=server_path, jar_file=jar_name,

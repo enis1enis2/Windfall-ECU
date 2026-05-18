@@ -4,6 +4,7 @@ import tempfile
 import shutil
 from config import SERVERS_DIR
 from models import create_server
+from path_util import safe_path, safe_join, safe_write
 
 
 def import_zip(file_storage, server_name=None):
@@ -58,19 +59,17 @@ def import_zip(file_storage, server_name=None):
             base = os.path.basename(jar_file).replace('.jar', '')
             server_name = base if base else 'Imported Server'
 
-        safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in server_name)
-        server_path = os.path.join(SERVERS_DIR, safe_name)
+        server_path = safe_path(SERVERS_DIR, server_name)
 
         if os.path.exists(server_path):
             shutil.rmtree(tmp_dir)
-            return None, f'Server directory {safe_name} already exists'
+            return None, f'Server directory {os.path.basename(server_path)} already exists'
 
         shutil.copytree(extract_dir, server_path)
 
-        eula_path = os.path.join(server_path, 'eula.txt')
+        eula_path = safe_join(server_path, 'eula.txt')
         if not os.path.isfile(eula_path):
-            with open(eula_path, 'w') as f:
-                f.write('eula=true\n')
+            safe_write(eula_path, 'eula=true\n')
 
         jar_rel_path = jar_file
 

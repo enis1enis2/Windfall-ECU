@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from config import BACKUPS_DIR, SERVERS_DIR
 from models import get_server, create_backup_entry, get_backup, delete_backup_entry, get_backups as db_get_backups
+from path_util import safe_join, safe_path
 
 
 def list_backups(server_id):
@@ -24,11 +25,10 @@ def create_backup(server_id, name=None):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         name = f"{server['name']}_{timestamp}"
 
-    safe_name = ''.join(c if c.isalnum() or c in ' _-.' else '_' for c in name)
-    backup_dir = os.path.join(BACKUPS_DIR, str(server_id))
+    backup_dir = safe_join(BACKUPS_DIR, str(server_id))
     os.makedirs(backup_dir, exist_ok=True)
 
-    backup_path = os.path.join(backup_dir, f'{safe_name}.tar.gz')
+    backup_path = safe_path(backup_dir, f'{name}.tar.gz')
 
     try:
         with tarfile.open(backup_path, 'w:gz') as tar:

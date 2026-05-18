@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from path_util import safe_join
 
 MODRINTH_API = 'https://api.modrinth.com/v2'
 HANGAR_API = 'https://hangar.papermc.io/api/v1'
@@ -154,7 +155,7 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
     if not server:
         return False, 'Server not found'
 
-    plugins_dir = os.path.join(server['path'], 'plugins')
+    plugins_dir = safe_join(server['path'], 'plugins')
     os.makedirs(plugins_dir, exist_ok=True)
 
     if provider == 'modrinth':
@@ -179,9 +180,9 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
 
         primary = next((f for f in files if f.get('primary')), files[0])
         url = primary['url']
-        filename = primary['filename']
+        filename = primary['filename'].replace('../', '').replace('..\\', '')
 
-        dest = os.path.join(plugins_dir, filename)
+        dest = safe_join(plugins_dir, filename)
         try:
             r = requests.get(url, stream=True, timeout=180)
             r.raise_for_status()

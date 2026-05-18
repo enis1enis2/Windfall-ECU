@@ -7,6 +7,7 @@ import shutil
 from flask import Flask, render_template, request, jsonify, send_file, abort, session
 from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
+from path_util import safe_join, safe_path, safe_write
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server
 from server_manager import (ServerProcess, get_server_process, register_server,
                             unregister_server, get_server_path, clean_output)
@@ -200,8 +201,7 @@ def api_servers_create():
     java_args = data.get('java_args', '-Xmx1G -Xms1G')
     server_type = data.get('server_type', 'vanilla')
 
-    safe_name = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in name)
-    server_path = os.path.join(SERVERS_DIR, safe_name)
+    server_path = safe_path(SERVERS_DIR, name)
     os.makedirs(server_path, exist_ok=True)
 
     server_id = create_server(
@@ -583,8 +583,8 @@ def api_download_versions(server_type):
     try:
         versions = get_versions(server_type)
         return jsonify(versions)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Failed to get versions'}), 500
 
 
 @app.route('/api/download/builds/<server_type>/<version>', methods=['GET'])
@@ -594,8 +594,8 @@ def api_download_builds(server_type, version):
     try:
         builds = get_builds(server_type, version)
         return jsonify(builds)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Failed to get versions'}), 500
 
 
 @app.route('/api/download', methods=['POST'])
@@ -616,8 +616,8 @@ def api_download():
         if error:
             return jsonify({'error': error}), 400
         return jsonify({'id': server_id, 'status': 'downloaded'}), 201
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Download failed'}), 500
 
 
 @app.route('/api/servers/<int:server_id>/upgrade', methods=['POST'])
@@ -670,8 +670,8 @@ def api_plugins_search():
     try:
         results = search_plugins(q, provider, server_type=server_type)
         return jsonify(results)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Search failed'}), 500
 
 
 @app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
@@ -681,8 +681,8 @@ def api_plugin_versions(provider, project_id):
     try:
         versions = plugin_get_versions(provider, project_id)
         return jsonify(versions)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Failed to get versions'}), 500
 
 
 @app.route('/api/plugins/install', methods=['POST'])
