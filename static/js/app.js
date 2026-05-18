@@ -462,6 +462,39 @@ function logoutUser() {
   });
 }
 
+/* System Metrics */
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let s = bytes;
+  while (s >= 1024 && i < u.length - 1) { s /= 1024; i++; }
+  return `${s.toFixed(1)} ${u[i]}`;
+}
+
+let metricsInterval = null;
+
+async function updateMetrics() {
+  try {
+    const data = await api('GET', '/system/metrics');
+    const ram = data.ram, cpu = data.cpu, disk = data.disk;
+
+    document.getElementById('metric-ram-txt').textContent =
+      `${formatBytes(ram.used)} / ${formatBytes(ram.total)}`;
+    document.getElementById('metric-ram-bar').style.width = ram.percent + '%';
+    document.getElementById('metric-ram-bar').className = 'progress' + (ram.percent > 80 ? ' danger' : ram.percent > 60 ? ' warning' : '');
+
+    document.getElementById('metric-cpu-txt').textContent = cpu.percent.toFixed(1) + '%';
+    document.getElementById('metric-cpu-bar').style.width = cpu.percent + '%';
+    document.getElementById('metric-cpu-bar').className = 'progress' + (cpu.percent > 80 ? ' danger' : cpu.percent > 60 ? ' warning' : '');
+
+    document.getElementById('metric-disk-txt').textContent =
+      `${formatBytes(disk.used)} / ${formatBytes(disk.total)}`;
+    document.getElementById('metric-disk-bar').style.width = disk.percent + '%';
+    document.getElementById('metric-disk-bar').className = 'progress' + (disk.percent > 90 ? ' danger' : disk.percent > 75 ? ' warning' : '');
+  } catch (e) { /* silently retry */ }
+}
+
 /* Panel Auto-Update */
 let updateInterval = null;
 
@@ -540,6 +573,10 @@ document.addEventListener('DOMContentLoaded', () => {
       notify('Please drop a .zip file', 'error');
     }
   });
+
+  /* System metrics polling */
+  updateMetrics();
+  metricsInterval = setInterval(updateMetrics, 2000);
 
   /* Panel auto-update polling */
   checkForUpdates();

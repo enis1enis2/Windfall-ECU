@@ -21,16 +21,23 @@
         <div class="metric-item">
           <div class="metric-label">
             <span>RAM Usage</span>
-            <span id="metric-ram-txt">2.4 GB / 4.0 GB</span>
+            <span id="metric-ram-txt">—</span>
           </div>
-          <div class="metric-bar"><div class="progress" style="width: 60%"></div></div>
+          <div class="metric-bar"><div class="progress" id="metric-ram-bar" style="width: 0%"></div></div>
         </div>
         <div class="metric-item">
           <div class="metric-label">
             <span>CPU Load</span>
-            <span id="metric-cpu-txt">34%</span>
+            <span id="metric-cpu-txt">—</span>
           </div>
-          <div class="metric-bar"><div class="progress warning" style="width: 34%"></div></div>
+          <div class="metric-bar"><div class="progress" id="metric-cpu-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">
+            <span>Disk Usage</span>
+            <span id="metric-disk-txt">—</span>
+          </div>
+          <div class="metric-bar"><div class="progress" id="metric-disk-bar" style="width: 0%"></div></div>
         </div>
       </div>
 

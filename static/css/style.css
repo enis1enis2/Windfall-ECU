@@ -165,6 +165,10 @@ body {
   background: var(--warning);
 }
 
+.metric-bar .progress.danger {
+  background: var(--danger);
+}
+
 /* ==========================================================================
    Navigation Systems (Vertical Tab Infrastructure)
    ========================================================================== */

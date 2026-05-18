@@ -507,6 +507,30 @@ def api_docker_check():
     return jsonify({'available': check_docker()})
 
 
+@app.route('/api/system/metrics', methods=['GET'])
+@login_required
+def api_system_metrics():
+    import psutil
+    mem = psutil.virtual_memory()
+    cpu = psutil.cpu_percent(interval=0.2)
+    disk = psutil.disk_usage('/')
+    return jsonify({
+        'ram': {
+            'total': mem.total,
+            'used': mem.used,
+            'percent': mem.percent
+        },
+        'cpu': {
+            'percent': cpu
+        },
+        'disk': {
+            'total': disk.total,
+            'used': disk.used,
+            'percent': disk.percent
+        }
+    })
+
+
 @app.route('/api/settings', methods=['GET'])
 @login_required
 @require_permission('settings:read')
