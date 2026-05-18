@@ -697,5 +697,5 @@ def api_plugin_delete(server_id, filename):
 
 
 if __name__ == '__main__':
-    print(f'GreatPanel starting on {HOST}:{PORT}')
+    print(f'Windfall ECU starting on {HOST}:{PORT}')
     socketio.run(app, host=HOST, port=PORT, allow_unsafe_werkzeug=True)

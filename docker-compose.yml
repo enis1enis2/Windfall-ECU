@@ -1,7 +1,7 @@
 services:
-  greatpanel:
+  windfall-ecu:
     build: .
-    container_name: greatpanel
+    container_name: windfall-ecu
     ports:
       - "8080:8080"
     volumes:

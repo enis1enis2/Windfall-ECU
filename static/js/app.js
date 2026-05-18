@@ -410,11 +410,11 @@ function toggleTheme() {
   html.setAttribute('data-theme', next);
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
-  localStorage.setItem('greatpanel-theme', next);
+  localStorage.setItem('windfall-ecu-theme', next);
 }
 
 function loadTheme() {
-  const saved = localStorage.getItem('greatpanel-theme') || 'dark';
+  const saved = localStorage.getItem('windfall-ecu-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';

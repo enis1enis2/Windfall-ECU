@@ -26,7 +26,7 @@ def create_docker_container(server_id, server_name, server_path, jar_file, java_
         return False, 'Docker is not available'
 
     safe_name = ''.join(c if c.isalnum() or c in '_-' else '_' for c in server_name)
-    container_name = f'greatpanel_{server_id}_{safe_name}'
+    container_name = f'windfall-ecu_{server_id}_{safe_name}'
 
     import shlex
     cmd_parts = ['java'] + shlex.split(java_args) + ['-jar', jar_file, 'nogui']

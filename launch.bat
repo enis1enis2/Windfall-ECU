@@ -91,9 +91,9 @@ pip install -r requirements.txt -q
 call :info "All dependencies installed."
 
 :: --- Autostart setup ---
-call :confirm "Add GreatPanel to startup (Windows Startup folder)?"
+call :confirm "Add Windfall ECU to startup (Windows Startup folder)?"
 if !errorlevel! equ 0 (
-    set "STARTUP_LINK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\GreatPanel.lnk"
+    set "STARTUP_LINK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Windfall ECU.lnk"
     if exist "%STARTUP_LINK%" (
         call :info "Startup shortcut already exists."
     ) else (
@@ -106,11 +106,11 @@ if !errorlevel! equ 0 (
         if !errorlevel! equ 0 (
             powershell -Command ^
                 $ws = New-Object -ComObject WScript.Shell; ^
-                $s = $ws.CreateShortcut('%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\GreatPanel.lnk'); ^
+                $s = $ws.CreateShortcut('%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Windfall ECU.lnk'); ^
                 $s.TargetPath = '%SCRIPT_DIR%launch.bat'; ^
                 $s.WorkingDirectory = '%SCRIPT_DIR%'; ^
                 $s.WindowStyle = 7; ^
-                $s.Description = 'GreatPanel — Minecraft Server Manager'; ^
+                $s.Description = 'Windfall ECU — Minecraft Server Manager'; ^
                 $s.Save()
             if !errorlevel! equ 0 (
                 call :info "Startup shortcut created."
@@ -123,14 +123,14 @@ if !errorlevel! equ 0 (
 
 :: --- Launch ---
 echo.
-call :info "Starting GreatPanel on http://localhost:8080"
+call :info "Starting Windfall ECU on http://localhost:8080"
 echo   Default login: admin / admin
 echo.
 echo Press Ctrl+C to stop the server.
 echo.
 python app.py
 if !errorlevel! neq 0 (
-    call :fatal "GreatPanel exited with an error."
+    call :fatal "Windfall ECU exited with an error."
 )
 
 pause

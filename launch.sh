@@ -99,13 +99,13 @@ pip install -r requirements.txt -q
 info "All dependencies installed."
 
 # --- Autostart setup ---
-SERVICE_NAME="greatpanel"
+SERVICE_NAME="windfall-ecu"
 SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE_NAME.service"
-if confirm "Add GreatPanel to startup?"; then
+if confirm "Add Windfall ECU to startup?"; then
     mkdir -p "$HOME/.config/systemd/user"
     cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=GreatPanel — Minecraft Server Manager
+Description=Windfall ECU — Minecraft Server Manager
 After=network.target
 
 [Service]
@@ -120,15 +120,15 @@ WantedBy=default.target
 EOF
     systemctl --user daemon-reload
     systemctl --user enable --now "$SERVICE_NAME"
-    info "GreatPanel will start automatically on login."
+    info "Windfall ECU will start automatically on login."
     info "Manage it with: systemctl --user {start,stop,restart,status} $SERVICE_NAME"
 fi
 
 # --- Launch ---
 printf "\n"
-info "Starting GreatPanel on http://localhost:8080"
+info "Starting Windfall ECU on http://localhost:8080"
 echo "  Default login: admin / admin"
 printf "\n"
 if ! $PYTHON app.py; then
-    fatal "GreatPanel exited with an error."
+    fatal "Windfall ECU exited with an error."
 fi

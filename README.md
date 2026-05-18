@@ -1,6 +1,6 @@
 <div align="center">
 
-  ![GreatPanel](https://img.shields.io/badge/GreatPanel-Minecraft%20Server%20Manager-3b82f6?style=for-the-badge)
+  ![Windfall ECU](https://img.shields.io/badge/Windfall%20ECU-Minecraft%20Server%20Manager-3b82f6?style=for-the-badge)
   <br>
   [![License: MIT](https://img.shields.io/badge/License-MIT-3b82f6?style=flat-square)](LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.8%2B-3b82f6?style=flat-square&logo=python&logoColor=white)](https://python.org)
@@ -83,11 +83,11 @@ Open **http://localhost:8080** in your browser and log in with:
 
 ## Configuration
 
-GreatPanel is configured via environment variables:
+Windfall ECU is configured via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GREATPANEL_SECRET` | `greatpanel-secret-change-me` | Flask secret key for sessions |
+| `GREATPANEL_SECRET` | `windfall-ecu-secret-change-me` | Flask secret key for sessions |
 | `GREATPANEL_HOST` | `0.0.0.0` | Web server bind address |
 | `GREATPANEL_PORT` | `8080` | Web server port |
 | `GREATPANEL_JAVA` | `java` | Java binary path |

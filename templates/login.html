@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GreatPanel - Login</title>
+  <title>Windfall ECU - Login</title>
   <link rel="stylesheet" href="/static/css/style.css?v=2">
   <style>
     .login-page {
@@ -97,7 +97,7 @@
   <div class="login-card">
     <div class="logo-wrap">
       <div class="logo">G</div>
-      <h1>GreatPanel</h1>
+      <h1>Windfall ECU</h1>
     </div>
     <p class="subtitle">Minecraft Server Manager</p>
 
@@ -137,7 +137,7 @@
     </div>
 
     <div class="login-footer">
-      <a href="https://github.com/enis1enis2/GreatPanel" target="_blank" rel="noopener">GreatPanel</a> &mdash; Open Source
+      <a href="https://github.com/enis1enis2/GreatPanel" target="_blank" rel="noopener">Windfall ECU</a> &mdash; Open Source
     </div>
   </div>
 
@@ -148,10 +148,10 @@
       const next = current === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
       document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
-      localStorage.setItem('greatpanel-theme', next);
+      localStorage.setItem('windfall-ecu-theme', next);
     }
 
-    const savedTheme = localStorage.getItem('greatpanel-theme') || 'dark';
+    const savedTheme = localStorage.getItem('windfall-ecu-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
 

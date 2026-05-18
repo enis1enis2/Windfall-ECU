@@ -1,4 +1,4 @@
-# GreatPanel — Agent Guide
+# Windfall ECU — Agent Guide
 
 ## Stack
 - **Backend**: Flask, Flask-SocketIO (eventlet async), SQLite, Werkzeug
