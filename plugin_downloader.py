@@ -144,7 +144,7 @@ def get_versions(provider, project_id):
     if provider == 'modrinth':
         try:
             return _modrinth_versions(project_id)
-        except Exception as e:
+        except Exception:
             return []
     return []
 
@@ -190,8 +190,8 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
                 for chunk in r.iter_content(8192):
                     f.write(chunk)
             return True, f'Installed {filename}'
-        except Exception as e:
-            return False, f'Download failed: {e}'
+        except Exception:
+            return False, 'Download failed'
 
     elif provider == 'hangar':
         return False, 'Hangar downloads require authentication. Visit the project page to download manually.'
