@@ -652,6 +652,7 @@ def api_plugins_search():
 
 @app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
 @login_required
+@require_permission('plugins:search')
 def api_plugin_versions(provider, project_id):
     try:
         versions = plugin_get_versions(provider, project_id)

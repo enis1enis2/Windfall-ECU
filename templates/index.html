@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Windfall ECU</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
-  <link rel="stylesheet" href="static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body>
   <div class="app">
@@ -44,6 +44,8 @@
           <div class="sidebar-actions">
             <button class="btn btn-primary btn-sm" onclick="createServer()">+ New</button>
             <button class="btn btn-secondary btn-sm" onclick="manualImport()">Import</button>
+            <button class="btn btn-outline btn-sm" onclick="openAutoBackupSettings()" title="Auto Backup">⏱️</button>
+            <button class="btn btn-outline btn-sm" id="btn-users" onclick="openUserManager()" title="Users">👤</button>
           </div>
         </div>
 
@@ -73,8 +75,9 @@
       <div class="main-header">
         <h2 id="main-title">Select a server</h2>
         <div id="server-actions" class="server-actions hidden">
-          <button class="btn btn-success btn-sm" onclick="startServer()">Start</button>
-          <button class="btn btn-danger btn-sm" onclick="stopServer()">Stop</button>
+          <button class="btn btn-success btn-sm" id="btn-start" onclick="startServer()">Start</button>
+          <button class="btn btn-secondary btn-sm" id="btn-restart" onclick="restartServer()" style="display:none">Restart</button>
+          <button class="btn btn-danger btn-sm" id="btn-stop" onclick="stopServer()" style="display:none">Stop</button>
           <button class="btn btn-secondary btn-sm" onclick="openSettings(activeServerId)">Settings</button>
           <button class="btn btn-danger btn-sm" onclick="deleteServer()">Delete</button>
         </div>
@@ -198,9 +201,99 @@
           Example: <code>-Xmx4G -Xms2G -XX:+UseG1GC</code>
         </p>
       </div>
+      <div class="form-row">
+        <button class="btn btn-secondary btn-sm" onclick="editServerProperties(activeServerId)">Edit server.properties</button>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
         <button class="btn btn-success" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Confirm Overlay -->
+  <div class="modal-overlay hidden" id="stop-confirm-overlay">
+    <div class="modal" style="max-width:420px">
+      <h3>Stop Server</h3>
+      <p>Are you sure you want to stop <strong id="stop-server-name">the server</strong>?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeStopConfirm()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmStop()">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Management Modal -->
+  <div class="modal-overlay hidden" id="users-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>User Manager</h3>
+        <button class="btn btn-primary btn-sm" onclick="openCreateUser()">+ New User</button>
+      </div>
+      <div id="users-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeUserManager()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Edit Modal -->
+  <div class="modal-overlay hidden" id="user-edit-modal">
+    <div class="modal">
+      <h3 id="user-edit-title">Edit User</h3>
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="user-edit-username" placeholder="Username" minlength="3">
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" id="user-edit-password" placeholder="Leave blank to keep current">
+      </div>
+      <div class="form-row">
+        <label>Role</label>
+        <select id="user-edit-role"></select>
+      </div>
+      <input type="hidden" id="user-edit-id">
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="user-delete-btn" onclick="deleteUser()">Delete User</button>
+        <button class="btn btn-secondary" onclick="closeUserEdit()">Cancel</button>
+        <button class="btn btn-success" onclick="saveUser()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto Backup Settings Modal -->
+  <div class="modal-overlay hidden" id="autobackup-modal">
+    <div class="modal" style="max-width:420px">
+      <h3>Auto Backup Settings</h3>
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="ab-enabled"> Enable Auto Backup
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Interval (minutes)</label>
+        <input type="number" id="ab-interval" value="60" min="1" step="1">
+      </div>
+      <div class="form-row">
+        <label>Retention (number of backups to keep)</label>
+        <input type="number" id="ab-retention" value="10" min="1" step="1">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAutoBackupSettings()">Cancel</button>
+        <button class="btn btn-success" onclick="saveAutoBackupSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Properties Editor Modal -->
+  <div class="modal-overlay hidden" id="properties-modal">
+    <div class="modal modal-lg">
+      <h3>Server Properties</h3>
+      <textarea id="properties-editor" style="width:100%;min-height:400px;font-family:monospace;font-size:13px;background:var(--terminal-bg, #000);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;resize:vertical"></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePropertiesEditor()">Cancel</button>
+        <button class="btn btn-success" onclick="saveProperties(activeServerId)">Save</button>
       </div>
     </div>
   </div>

@@ -53,6 +53,10 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function escapeJs(str) {
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
 function renderServerList() {
   const list = document.getElementById('server-list');
   list.innerHTML = '';
@@ -226,7 +230,6 @@ async function saveSettings() {
 }
 
 /* User Manager */
-let currentUserRole = 'admin';
 
 async function openUserManager() {
   try {
@@ -234,7 +237,6 @@ async function openUserManager() {
     const list = document.getElementById('users-list');
     list.innerHTML = users.map(u => {
       const date = new Date(u.created_at + 'Z').toLocaleDateString();
-      const isSelf = u.username === document.querySelector('.sidebar-header .brand h1')?.textContent;
       const badge = u.role === 'admin' ? 'Admin' : u.role === 'operator' ? 'Operator' : 'Viewer';
       return `<div class="backup-item" style="cursor:pointer" onclick="openUserEdit(${u.id})">
         <div class="info">

@@ -48,7 +48,7 @@ async function loadInstalledPlugins(serverId) {
           <div class="plugin-name">${escapeHtml(p.filename)}</div>
           <div class="plugin-meta">${size} &middot; ${date}</div>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="deleteInstalledPlugin(${serverId}, '${escapeHtml(p.filename)}')">Delete</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInstalledPlugin(${serverId}, '${escapeJs(p.filename)}')">Delete</button>
       `;
       list.appendChild(div);
     });
@@ -129,7 +129,7 @@ function renderSearchResults(results) {
         <span>v${escapeHtml(p.latest_version)}</span>
       </div>
       <div class="plugin-card-actions">
-        <button class="btn btn-success btn-sm" onclick="showInstallDialog('${escapeHtml(p.provider)}', '${escapeHtml(p.id)}', '${escapeHtml(p.name)}', ${activeServerId})">Install</button>
+        <button class="btn btn-success btn-sm" onclick="showInstallDialog('${escapeJs(p.provider)}', '${escapeJs(p.id)}', '${escapeJs(p.name)}', ${activeServerId})">Install</button>
         <a href="${escapeHtml(p.project_url)}" target="_blank" class="btn btn-secondary btn-sm">View</a>
       </div>
     `;
@@ -204,15 +204,6 @@ async function deleteInstalledPlugin(serverId, filename) {
   } catch (e) {
     notify(e.message, 'error');
   }
-}
-
-function formatSize(bytes) {
-  if (!bytes) return '0 B';
-  const u = ['B', 'KB', 'MB', 'GB'];
-  let i = 0;
-  let s = bytes;
-  while (s >= 1024 && i < u.length - 1) { s /= 1024; i++; }
-  return `${s.toFixed(1)} ${u[i]}`;
 }
 
 function formatDownloads(n) {

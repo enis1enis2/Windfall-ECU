@@ -32,7 +32,17 @@ def _git(*args, timeout=30):
         os.unlink(err_file.name)
 
 
+def _git_available():
+    try:
+        subprocess.run(['git', '--version'], capture_output=True, timeout=5)
+        return True
+    except Exception:
+        return False
+
+
 def check_updates():
+    if not _git_available():
+        return {'update_available': False, 'error': 'git is not installed'}
     try:
         _git('fetch', 'origin', timeout=30)
         result = _git('rev-list', '--count', 'HEAD..origin/main', timeout=10)
@@ -50,6 +60,8 @@ def check_updates():
 
 
 def install_updates():
+    if not _git_available():
+        return {'success': False, 'error': 'git is not installed'}
     try:
         result = _git('pull', 'origin', 'main', timeout=60)
         if result.returncode == 0:
@@ -57,7 +69,8 @@ def install_updates():
                 subprocess.run(
                     [sys.executable, '-m', 'pip', 'install', '-r',
                      os.path.join(BASE_DIR, 'requirements.txt'), '-q'],
-                    cwd=BASE_DIR,                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120
+                    cwd=BASE_DIR,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120
                 )
             except Exception:
                 pass

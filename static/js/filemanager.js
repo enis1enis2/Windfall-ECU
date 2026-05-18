@@ -27,7 +27,7 @@ async function renderFileTree(serverId, path) {
 function buildTreeHtml(serverId, data, basePath) {
   let html = '';
   if (data.parent !== null && data.parent !== undefined) {
-    html += `<div class="tree-item" onclick="renderFileTree(${serverId}, '${escapeHtml(data.parent)}')">
+    html += `<div class="tree-item" onclick="renderFileTree(${serverId}, '${escapeJs(data.parent)}')">
       <span class="icon">📂</span> ..
     </div>`;
   }
@@ -37,11 +37,11 @@ function buildTreeHtml(serverId, data, basePath) {
     const path = entry.path;
     const display = entry.name;
     if (entry.is_dir) {
-      html += `<div class="tree-item" onclick="renderFileTree(${serverId}, '${escapeHtml(path)}')">
+      html += `<div class="tree-item" onclick="renderFileTree(${serverId}, '${escapeJs(path)}')">
         <span class="icon ${iconClass}">${icon}</span> ${escapeHtml(display)}
       </div>`;
     } else {
-      html += `<div class="tree-item ${currentFilePath === path ? 'selected' : ''}" onclick="openFile(${serverId}, '${escapeHtml(path)}')">
+      html += `<div class="tree-item ${currentFilePath === path ? 'selected' : ''}" onclick="openFile(${serverId}, '${escapeJs(path)}')">
         <span class="icon ${iconClass}">${icon}</span> ${escapeHtml(display)}
       </div>`;
     }
