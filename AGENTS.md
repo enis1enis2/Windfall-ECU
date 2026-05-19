@@ -38,6 +38,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `auto_backup.py` | Background scheduler for automatic backups (customizable interval, retention, enable/disable) |
 | `docker_manager.py` | Docker container lifecycle (build/run/stop) |
 | `zip_importer.py` | ZIP import with server type detection from JAR filename |
+| `update_manager.py` | Git fetch/pull, pip install, restart for panel self-update |
 | `path_util.py` | Shared path safety (`safe_join`, `safe_path`, `safe_write`, `sanitize_name`) |
 | `build.sh` | Static asset build script (bundles JS via esbuild, minifies CSS via csso) |
 | `package.json` | Node.js dev dependencies (esbuild, csso) + `npm run build` |
@@ -59,6 +60,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - All text responses (HTML/CSS/JS/JSON) are gzip-compressed via `app.py:after_request`.
 - `index.html` references `windfall.min.js` and `style.min.css` instead of 7 separate JS files.
 - Terminal redesigned to Pterodactyl-style layout: read-only xterm display, command input bar at bottom with `>` prompt, connection status dot indicator, no status bar. Terminal theme reads from CSS variables and respects light/dark mode (16 ANSI colors per theme, Pterodactyl-inspired palettes).
+- Secret admin panel hidden behind double-click on sidebar header ("Windfall ECU") — only accessible to admin role users. Shows system info, disk usage, user/server stats, uptime.
 
 ## Env vars
 `GREATPANEL_SECRET`, `GREATPANEL_HOST`, `GREATPANEL_PORT`, `GREATPANEL_JAVA`, `GREATPANEL_ORIGIN`
