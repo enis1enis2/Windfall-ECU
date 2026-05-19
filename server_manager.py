@@ -53,12 +53,34 @@ class ServerProcess:
         self.buffer = ConsoleBuffer()
         self._stop_event = threading.Event()
 
+    def _free_port(self):
+        props = os.path.join(self.workdir, 'server.properties')
+        port = '25565'
+        if os.path.isfile(props):
+            try:
+                with open(props) as f:
+                    for line in f:
+                        m = re.match(r'^server-port=(\d+)', line.strip())
+                        if m:
+                            port = m.group(1)
+                            break
+            except OSError:
+                pass
+        try:
+            subprocess.run(['fuser', '-k', f'{port}/tcp'], capture_output=True, timeout=5)
+        except Exception:
+            try:
+                subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, timeout=5)
+            except Exception:
+                pass
+
     def start(self):
         if self.running:
             return False
 
         os.makedirs(self.workdir, exist_ok=True)
         os.makedirs(os.path.join(self.workdir, 'logs'), exist_ok=True)
+        self._free_port()
 
         java_opts = ['-Dlog4j.configurationFile=log4j2.xml', '-Dconsole.encoding=UTF-8']
         cmd = [JAVA_BIN] + java_opts + shlex.split(self.java_args) + ['-jar', self.jar_file, 'nogui']
