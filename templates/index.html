@@ -74,6 +74,7 @@
       <div class="sidebar-footer">
         <button class="theme-toggle-btn" onclick="toggleTheme()">🌙 Dark Mode</button>
         <button class="update-indicator" id="update-btn" onclick="openUpdateModal()" style="display:none" title="Update available">🔄</button>
+        <button class="btn btn-sm btn-outline" onclick="adminPanelTrigger()" id="admin-btn" style="display:none;flex:0;padding:10px 12px;font-size:12px" title="Admin Panel">🛡️</button>
         <button class="btn btn-sm btn-outline" onclick="logoutUser()" style="flex:0;padding:10px 12px;font-size:12px">Log Out</button>
       </div>
     </aside>
@@ -322,12 +323,15 @@
 
   <!-- Secret Admin Panel -->
   <div class="modal-overlay hidden" id="admin-modal">
-    <div class="modal modal-lg">
+    <div class="modal modal-lg" style="max-width:680px">
       <div class="modal-header">
         <h3>🛡️ Admin Panel</h3>
-        <button class="btn btn-sm btn-outline" onclick="closeAdminPanel()">Close</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-outline" onclick="loadAdminInfo()" title="Refresh">↻</button>
+          <button class="btn btn-sm btn-outline" onclick="closeAdminPanel()">Close</button>
+        </div>
       </div>
-      <div class="admin-grid" id="admin-content">
+      <div class="admin-layout" id="admin-content">
         <div class="spinner"></div>
       </div>
     </div>

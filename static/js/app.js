@@ -565,18 +565,65 @@ async function loadAdminInfo() {
     const ups = Math.floor(d.uptime / 86400);
     const uph = Math.floor((d.uptime % 86400) / 3600);
     const upm = Math.floor((d.uptime % 3600) / 60);
+    const dp = d.disk_total ? (d.disk_used / d.disk_total * 100).toFixed(1) : 0;
     el.innerHTML = `
-      <div class="admin-card"><span class="admin-label">Python</span><span>${d.python}</span></div>
-      <div class="admin-card"><span class="admin-label">Platform</span><span>${d.platform}</span></div>
-      <div class="admin-card"><span class="admin-label">Uptime</span><span>${ups}d ${uph}h ${upm}m</span></div>
-      <div class="admin-card"><span class="admin-label">Users</span><span>${d.users_total} (admin:${d.users_by_role.admin} op:${d.users_by_role.operator} view:${d.users_by_role.viewer})</span></div>
-      <div class="admin-card"><span class="admin-label">Servers</span><span>${d.servers_total} (${d.servers_running} running)</span></div>
-      <div class="admin-card"><span class="admin-label">Disk (server dir)</span><span>${formatBytes(d.server_dir_size)} used / ${formatBytes(d.disk_total)} total</span></div>
-      <div class="admin-card"><span class="admin-label">Disk (backups)</span><span>${formatBytes(d.backups_dir_size)}</span></div>
-      <div class="admin-card"><span class="admin-label">Database</span><span>${formatBytes(d.db_size)}</span></div>
+      <div class="admin-section">
+        <div class="admin-section-title">System</div>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <span class="admin-label">Python</span>
+            <span class="admin-value">${d.python}</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Platform</span>
+            <span class="admin-value">${escapeHtml(d.platform)}</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Host Uptime</span>
+            <span class="admin-value">${ups}d ${uph}h ${upm}m</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Database</span>
+            <span class="admin-value">${formatBytes(d.db_size)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">Storage</div>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <span class="admin-label">Server Data</span>
+            <span class="admin-value">${formatBytes(d.server_dir_size)}</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Backups</span>
+            <span class="admin-value">${formatBytes(d.backups_dir_size)}</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Disk Usage</span>
+            <span class="admin-value">${formatBytes(d.disk_used)} / ${formatBytes(d.disk_total)}</span>
+            <div class="admin-bar"><div class="admin-bar-fill" style="width:${dp}%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">Stats</div>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <span class="admin-label">Total Users</span>
+            <span class="admin-value">${d.users_total}</span>
+            <span class="admin-sub">${d.users_by_role.admin} admin · ${d.users_by_role.operator} operator · ${d.users_by_role.viewer} viewer</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Servers</span>
+            <span class="admin-value">${d.servers_total}</span>
+            <span class="admin-sub">${d.servers_running} running</span>
+          </div>
+        </div>
+      </div>
     `;
   } catch {
-    el.innerHTML = '<p style="color:var(--text-dim)">Failed to load admin info</p>';
+    el.innerHTML = '<p style="padding:20px;color:var(--text-dim);text-align:center">Failed to load admin info</p>';
   }
 }
 
@@ -616,10 +663,11 @@ document.addEventListener('DOMContentLoaded', () => {
   updateInterval = setInterval(checkForUpdates, 60000);
 
   /* Secret admin panel trigger */
-  const header = document.querySelector('.sidebar-header h1');
-  if (header) {
-    header.style.cursor = currentUserRole === 'admin' ? 'pointer' : '';
-    header.addEventListener('dblclick', adminPanelTrigger);
+  if (currentUserRole === 'admin') {
+    const abtn = document.getElementById('admin-btn');
+    if (abtn) abtn.style.display = '';
+    const header = document.querySelector('.sidebar-header h1');
+    if (header) { header.style.cursor = 'pointer'; header.addEventListener('dblclick', adminPanelTrigger); }
   }
 
   /* Modal overlay click-dismiss */

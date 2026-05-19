@@ -831,19 +831,40 @@ body {
 /* ==========================================================================
    Admin Panel
    ========================================================================== */
-.admin-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-  max-height: 400px; overflow-y: auto;
+.admin-layout {
+  max-height: 440px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 20px;
 }
+.admin-section { display: flex; flex-direction: column; gap: 8px; }
+.admin-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted);
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .admin-card {
   display: flex; flex-direction: column; gap: 2px;
   background: var(--bg); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 12px 14px;
-  font-size: 13px;
 }
 .admin-card .admin-label {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--text-dim);
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-dim);
+}
+.admin-card .admin-value {
+  font-size: 18px; font-weight: 700; color: var(--accent-bright);
+  font-variant-numeric: tabular-nums;
+}
+.admin-card .admin-sub {
+  font-size: 11px; color: var(--text-muted); margin-top: 2px;
+}
+.admin-bar {
+  margin-top: 6px; height: 4px; background: var(--card-hover);
+  border-radius: 4px; overflow: hidden;
+}
+.admin-bar-fill {
+  height: 100%; background: var(--accent); border-radius: 4px;
+  transition: width 0.4s ease;
 }
 
 /* ==========================================================================
