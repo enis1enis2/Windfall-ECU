@@ -138,7 +138,7 @@ jobs:
         import eventlet; eventlet.monkey_patch()
         from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
         from models import init_db, get_servers, get_server, create_server, delete_server, update_server
-        from server_manager import ServerProcess, get_server_process, register_server, unregister_server, get_server_path, clean_output
+        from server_manager import ServerProcess, get_server_process, register_server, unregister_server, clean_output
         from terminal_handler import setup_terminal_handlers
         from backup_manager import list_backups, create_backup, restore_backup, delete_backup
         from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
