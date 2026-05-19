@@ -19,6 +19,7 @@ ROLES = {
             'settings:read', 'settings:write',
             'system:docker', 'system:update',
             'users:manage',
+            'system:admin',
         }
     },
     'operator': {

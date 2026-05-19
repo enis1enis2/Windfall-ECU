@@ -746,6 +746,106 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ==========================================================================
+   Login Page
+   ========================================================================== */
+.login-page {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: var(--bg);
+  padding: 24px;
+}
+.login-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 40px 36px 32px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 25px 50px var(--shadow);
+  animation: slideUp 0.35s ease;
+  position: relative;
+}
+.login-card::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px;
+  height: 3px; background: var(--accent); border-radius: 0 0 3px 3px;
+}
+.login-card .logo h1 {
+  font-size: 24px; font-weight: 700; text-align: center;
+  color: var(--text); letter-spacing: -0.02em;
+}
+.login-card .logo h1 span { color: var(--accent); }
+.login-card .subtitle {
+  text-align: center; font-size: 13px; color: var(--text-dim);
+  margin-top: 4px; margin-bottom: 28px;
+}
+.login-card .form-row { margin-bottom: 18px; }
+.login-card label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.login-card input {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 14px; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.login-card input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+.login-card .btn { width: 100%; padding: 12px; font-size: 14px; margin-top: 4px; }
+.login-card .error {
+  color: var(--danger); font-size: 13px; text-align: center;
+  margin-bottom: 12px; display: none;
+}
+.login-card .toggle-link {
+  text-align: center; margin-top: 18px;
+  font-size: 13px; color: var(--text-dim);
+}
+.login-card .toggle-link a {
+  color: var(--accent); cursor: pointer; text-decoration: none;
+  font-weight: 500;
+}
+.login-card .toggle-link a:hover { text-decoration: underline; }
+.login-card .theme-toggle-wrap {
+  text-align: center; margin-top: 20px;
+}
+.login-card .theme-toggle {
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 6px 12px;
+  cursor: pointer; font-size: 16px; color: var(--text-dim);
+  transition: border-color 0.15s ease;
+}
+.login-card .theme-toggle:hover { border-color: var(--text-muted); }
+.login-card .login-footer {
+  text-align: center; margin-top: 20px;
+  font-size: 11px; color: var(--text-dim);
+}
+.login-card .login-footer a {
+  color: var(--accent); text-decoration: none;
+}
+
+/* ==========================================================================
+   Admin Panel
+   ========================================================================== */
+.admin-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  max-height: 400px; overflow-y: auto;
+}
+.admin-card {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px 14px;
+  font-size: 13px;
+}
+.admin-card .admin-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text-dim);
+}
+
 /* ==========================================================================
    Responsive View Breakpoints
    ========================================================================== */

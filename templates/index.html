@@ -320,6 +320,19 @@
     </div>
   </div>
 
+  <!-- Secret Admin Panel -->
+  <div class="modal-overlay hidden" id="admin-modal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3>🛡️ Admin Panel</h3>
+        <button class="btn btn-sm btn-outline" onclick="closeAdminPanel()">Close</button>
+      </div>
+      <div class="admin-grid" id="admin-content">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/socket.io@4.8.1/client-dist/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="static/js/windfall.min.js?v=1"></script>

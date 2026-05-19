@@ -488,6 +488,29 @@ def api_update_install():
     if not r['success']: return jsonify({'error': r['error']}), 400
     schedule_restart(); return jsonify({'status': 'restarting'})
 
+@app.route('/api/admin/info', methods=['GET'])
+@login_required
+@require_permission('system:admin')
+def api_admin_info():
+    import platform, datetime, sys
+    users = get_users()
+    total, used, free = shutil.disk_usage(SERVERS_DIR)
+    servers = get_servers()
+    db_size = os.path.getsize('instances.db') if os.path.isfile('instances.db') else 0
+    return jsonify({
+        'python': sys.version.split()[0],
+        'platform': platform.platform(),
+        'uptime': time.time() - psutil.boot_time(),
+        'users_total': len(users),
+        'users_by_role': {r: sum(1 for u in users if u.get('role') == r) for r in ('admin', 'operator', 'viewer')},
+        'servers_total': len(servers),
+        'servers_running': sum(1 for s in servers if s.get('status', {}).get('running')),
+        'disk_total': total, 'disk_used': used, 'disk_free': free,
+        'db_size': db_size,
+        'server_dir_size': sum(f.stat().st_size for f in __import__('pathlib').Path(SERVERS_DIR).rglob('*') if f.is_file()) if os.path.isdir(SERVERS_DIR) else 0,
+        'backups_dir_size': sum(f.stat().st_size for f in __import__('pathlib').Path(BACKUPS_DIR).rglob('*') if f.is_file()) if os.path.isdir(BACKUPS_DIR) else 0,
+    })
+
 if __name__ == '__main__':
     print(f'Windfall ECU starting on {HOST}:{PORT}')
     socketio.run(app, host=HOST, port=PORT, allow_unsafe_werkzeug=True)

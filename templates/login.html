@@ -4,100 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Windfall ECU - Login</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=2">
-  <style>
-    .login-page {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      background: var(--bg);
-    }
-    .login-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: var(--shadow);
-      animation: slideUp 0.3s ease;
-    }
-    .login-card h1 {
-      color: var(--accent);
-      font-size: 28px;
-      text-align: center;
-      margin-bottom: 4px;
-    }
-    .login-card .subtitle {
-      color: var(--text-dim);
-      text-align: center;
-      font-size: 13px;
-      margin-bottom: 28px;
-    }
-    .login-card .form-row {
-      margin-bottom: 16px;
-    }
-    .login-card label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-dim);
-      margin-bottom: 6px;
-    }
-    .login-card input {
-      width: 100%;
-      padding: 12px 14px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-      transition: border var(--transition);
-    }
-    .login-card input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-subtle);
-    }
-    .login-card .btn {
-      width: 100%;
-      padding: 12px;
-      font-size: 15px;
-      margin-top: 8px;
-    }
-    .login-card .error {
-      color: var(--danger);
-      font-size: 13px;
-      text-align: center;
-      margin-bottom: 12px;
-      display: none;
-    }
-    .login-card .toggle-link {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 13px;
-      color: var(--text-dim);
-    }
-    .login-card .toggle-link a {
-      color: var(--accent);
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .login-card .toggle-link a:hover {
-      text-decoration: underline;
-    }
-    .login-card .theme-toggle-wrap {
-      text-align: center;
-      margin-top: 20px;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body class="login-page">
   <div class="login-card">
-    <div class="logo-wrap">
-      <div class="logo">G</div>
-      <h1>Windfall ECU</h1>
+    <div class="logo">
+      <h1>Windfall <span>ECU</span></h1>
     </div>
     <p class="subtitle">Minecraft Server Manager</p>
 
@@ -106,7 +18,7 @@
     <form id="login-form" onsubmit="return doLogin(event)">
       <div class="form-row">
         <label for="username">Username</label>
-        <input type="text" id="username" placeholder="admin" required autocomplete="username">
+        <input type="text" id="username" placeholder="Enter username" required autocomplete="username">
       </div>
       <div class="form-row">
         <label for="password">Password</label>

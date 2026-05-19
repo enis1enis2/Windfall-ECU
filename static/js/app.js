@@ -547,6 +547,39 @@ async function installUpdate() {
   }
 }
 
+/* Secret Admin Panel */
+function openAdminPanel() {
+  document.getElementById('admin-modal').classList.remove('hidden');
+  loadAdminInfo();
+}
+function closeAdminPanel() {
+  document.getElementById('admin-modal').classList.add('hidden');
+}
+function adminPanelTrigger() {
+  if (currentUserRole === 'admin') openAdminPanel();
+}
+async function loadAdminInfo() {
+  const el = document.getElementById('admin-content');
+  try {
+    const d = await api('GET', '/admin/info');
+    const ups = Math.floor(d.uptime / 86400);
+    const uph = Math.floor((d.uptime % 86400) / 3600);
+    const upm = Math.floor((d.uptime % 3600) / 60);
+    el.innerHTML = `
+      <div class="admin-card"><span class="admin-label">Python</span><span>${d.python}</span></div>
+      <div class="admin-card"><span class="admin-label">Platform</span><span>${d.platform}</span></div>
+      <div class="admin-card"><span class="admin-label">Uptime</span><span>${ups}d ${uph}h ${upm}m</span></div>
+      <div class="admin-card"><span class="admin-label">Users</span><span>${d.users_total} (admin:${d.users_by_role.admin} op:${d.users_by_role.operator} view:${d.users_by_role.viewer})</span></div>
+      <div class="admin-card"><span class="admin-label">Servers</span><span>${d.servers_total} (${d.servers_running} running)</span></div>
+      <div class="admin-card"><span class="admin-label">Disk (server dir)</span><span>${formatBytes(d.server_dir_size)} used / ${formatBytes(d.disk_total)} total</span></div>
+      <div class="admin-card"><span class="admin-label">Disk (backups)</span><span>${formatBytes(d.backups_dir_size)}</span></div>
+      <div class="admin-card"><span class="admin-label">Database</span><span>${formatBytes(d.db_size)}</span></div>
+    `;
+  } catch {
+    el.innerHTML = '<p style="color:var(--text-dim)">Failed to load admin info</p>';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const zone = document.getElementById('import-zone');
   zone.addEventListener('click', () => {
@@ -581,6 +614,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Panel auto-update polling */
   checkForUpdates();
   updateInterval = setInterval(checkForUpdates, 60000);
+
+  /* Secret admin panel trigger */
+  const header = document.querySelector('.sidebar-header h1');
+  if (header) {
+    header.style.cursor = currentUserRole === 'admin' ? 'pointer' : '';
+    header.addEventListener('dblclick', adminPanelTrigger);
+  }
 
   /* Modal overlay click-dismiss */
   document.querySelectorAll('.modal-overlay').forEach(el => {
