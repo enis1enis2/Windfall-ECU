@@ -52,7 +52,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - `eventlet.monkey_patch()` must be the **very first import** in `app.py`.
 - No migration system — `init_db()` in `models.py` creates tables on startup.
 - Server processes are managed in-memory dict `_servers` keyed by DB id.
-- File paths are always sanitized and checked against a base path prefix to prevent traversal.
+- File paths are always sanitized and checked against a base path prefix to prevent traversal. All user-controlled path construction uses `safe_join` from `path_util.py` (raises ValueError on traversal) instead of raw `os.path.join` + manual prefix check. Fixed CodeQL path traversal alerts in `plugin_downloader.py` (delete_plugin) and `backup_manager.py` (create_backup) — both now use `safe_join` + `sanitize_name`.
 - `SERVERS_DIR`/`BACKUPS_DIR` created on startup, entries are gitignored.
 - `eula=true` written automatically on every server creation.
 - Static assets are built via `npm run build` (`build.sh`). The app falls back to source files if built files are missing.

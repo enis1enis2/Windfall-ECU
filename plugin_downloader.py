@@ -123,8 +123,9 @@ def delete_plugin(server_id, filename):
     from models import get_server
     server = get_server(server_id)
     if not server: return False, 'Server not found'
-    fp = os.path.join(server['path'], 'plugins', filename)
-    if not os.path.normpath(fp).startswith(os.path.normpath(os.path.join(server['path'], 'plugins'))):
+    try:
+        fp = safe_join(server['path'], 'plugins', filename)
+    except ValueError:
         return False, 'Access denied'
     if not os.path.isfile(fp): return False, 'File not found'
     os.remove(fp)
