@@ -35,7 +35,9 @@ def check_updates():
 def install_updates():
     if not _git_available(): return {'success': False, 'error': 'git is not installed'}
     try:
+        _git('stash', timeout=10)
         r = _git('pull', 'origin', 'main', timeout=60)
+        _git('stash', 'drop', timeout=5)
         if r.returncode == 0:
             try: subprocess.run([sys.executable, '-m', 'pip', 'install', '-r',
                                 os.path.join(BASE_DIR, 'requirements.txt'), '-q'],
