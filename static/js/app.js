@@ -180,6 +180,7 @@ function updateServerActions() {
 }
 
 function selectServer(id) {
+  closeSidebar();
   cleanupTerminal();
   activeServerId = id;
   renderServerList();
@@ -422,9 +423,21 @@ function loadTheme() {
   if (btn) btn.textContent = saved === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode';
 }
 
+/* Sidebar toggle for mobile */
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.querySelector('.sidebar-overlay').classList.toggle('visible');
+}
+
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.querySelector('.sidebar-overlay').classList.remove('visible');
+}
+
 /* Tab click handlers */
 document.querySelectorAll('.tab').forEach(el => {
   el.addEventListener('click', () => {
+    closeSidebar();
     const tab = el.dataset.tab;
     switchTab(tab);
     if (tab === 'terminal' && activeServerId) loadTerminal(activeServerId);
