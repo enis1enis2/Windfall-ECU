@@ -65,14 +65,17 @@ def init_auth():
 
 def register_user(username, password):
     if len(username) < 3 or len(password) < 4:
-        return False, 'Username must be at least 3 characters, password at least 4'
+        return False, 'Username must be at least 3 characters, password at least 4', None
     pw_hash = generate_password_hash(password)
-    try:
-        _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                 (username, pw_hash, 'admin'))
-        return True, 'User created'
-    except Exception:
-        return False, 'Username already exists'
+    db_user = username
+    for i in range(2, 100):
+        try:
+            _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+                     (db_user, pw_hash, 'viewer'))
+            return True, 'User created', db_user
+        except Exception:
+            db_user = f'{username}_{i}'
+    return False, 'Too many users with this name', None
 
 def verify_user(username, password):
     r = _fetchone('SELECT id, password_hash, role FROM users WHERE username = ?', (username,))

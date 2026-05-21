@@ -87,11 +87,11 @@ def api_auth_login():
 @app.route('/api/auth/register', methods=['POST'])
 def api_auth_register():
     d = request.json; u, p = d.get('username', '').strip(), d.get('password', '')
-    ok, msg = register_user(u, p)
+    ok, msg, db_user = register_user(u, p)
     if ok:
-        uid, role = verify_user(u, p)
-        session.update({'user_id': uid, 'username': u, 'role': role})
-        return jsonify({'status': 'ok', 'username': u, 'role': role}), 201
+        uid, role = verify_user(db_user, p)
+        session.update({'user_id': uid, 'username': db_user, 'role': role})
+        return jsonify({'status': 'ok', 'username': db_user, 'role': role}), 201
     return jsonify({'error': msg}), 400
 
 @app.route('/api/auth/logout', methods=['POST'])
