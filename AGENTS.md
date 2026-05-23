@@ -38,7 +38,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `auto_backup.py` | Background scheduler for automatic backups (customizable interval, retention, enable/disable) |
 | `docker_manager.py` | Docker container lifecycle (build/run/stop) |
 | `zip_importer.py` | ZIP import with server type detection from JAR filename |
-| `update_manager.py` | Git fetch/pull, pip install, restart for panel self-update |
+| `update_manager.py` | Git fetch/pull (with `git stash` before pull to avoid local changes blocking merge), pip install, restart for panel self-update |
 | `path_util.py` | Shared path safety (`safe_join`, `safe_path`, `safe_write`, `sanitize_name`) |
 | `build.sh` | Static asset build script (bundles JS via esbuild, minifies CSS via csso) |
 | `package.json` | Node.js dev dependencies (esbuild, csso) + `npm run build` |

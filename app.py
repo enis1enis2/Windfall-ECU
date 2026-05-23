@@ -9,13 +9,14 @@ from server_manager import ServerProcess, get_server_process, register_server, u
 from terminal_handler import setup_terminal_handlers
 from backup_manager import list_backups, create_backup, restore_backup, delete_backup
 from file_explorer import list_files, read_file, write_file, delete_entry, create_directory, upload_file
-from zip_importer import import_zip
+from zip_importer import import_zip, chunked_init, chunked_upload, chunked_finalize, get_progress
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
 from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
 from auth import login_required, require_permission, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, change_role, delete_user, create_user, ROLES
 from auto_backup import start_auto_backup_scheduler
 from update_manager import check_updates, install_updates, schedule_restart
+from discovery import start_scanner, get_discovered_log
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -34,7 +35,7 @@ for cmd in [['fuser', '-k', f'{PORT}/tcp'], ['lsof', '-ti', f'tcp:{PORT}']]:
         break
     except: pass
 
-init_db(); init_auth(); setup_terminal_handlers(socketio); start_auto_backup_scheduler()
+init_db(); init_auth(); setup_terminal_handlers(socketio); start_auto_backup_scheduler(); start_scanner()
 
 # --- Compression & caching ---
 COMPRESS_TYPES = {'text/html', 'text/css', 'application/javascript', 'application/json',
@@ -330,10 +331,46 @@ def api_import_zip():
     if 'file' not in request.files: return jsonify({'error': 'No file uploaded'}), 400
     f = request.files['file']
     if not f.filename.endswith('.zip'): return jsonify({'error': 'File must be a .zip'}), 400
-    sid, error = import_zip(f, request.form.get('name'))
-    if error: return jsonify({'error': error}), 400
-    s = get_server(sid)
-    return jsonify({'id': sid, 'name': s['name'] if s else request.form.get('name'), 'status': 'imported'}), 201
+    r = import_zip(f, request.form.get('name'))
+    if r['error']: return jsonify({'error': r['error']}), 400
+    s = get_server(r['id'])
+    return jsonify({'id': r['id'], 'name': s['name'] if s else request.form.get('name'), 'status': 'imported'}), 201
+
+@app.route('/api/import/chunked/init', methods=['POST'])
+@login_required
+@require_permission('import:zip')
+def api_chunked_init():
+    d = request.json
+    cid = chunked_init(d['filename'], d['total_size'], d.get('name'))
+    return jsonify({'cid': cid, 'chunk_size': 4 * 1024 * 1024})
+
+@app.route('/api/import/chunked/<cid>/<int:chunk_index>', methods=['POST'])
+@login_required
+@require_permission('import:zip')
+def api_chunked_upload(cid, chunk_index):
+    data = request.get_data()
+    chunked_upload(cid, chunk_index, data)
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/import/chunked/<cid>/finalize', methods=['POST'])
+@login_required
+@require_permission('import:zip')
+def api_chunked_finalize(cid):
+    r = chunked_finalize(cid)
+    if r['error']: return jsonify({'error': r['error']}), 400
+    s = get_server(r['id'])
+    return jsonify({'id': r['id'], 'name': s['name'] if s else '', 'status': 'imported'}), 201
+
+@app.route('/api/import/progress/<uid>', methods=['GET'])
+@login_required
+def api_import_progress(uid):
+    return jsonify(get_progress(uid))
+
+# --- Discovery ---
+@app.route('/api/discovery/log', methods=['GET'])
+@login_required
+def api_discovery_log():
+    return jsonify(get_discovered_log())
 
 # --- Console ---
 @app.route('/api/servers/<int:server_id>/console', methods=['GET'])
