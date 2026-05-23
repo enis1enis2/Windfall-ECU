@@ -1,5 +1,5 @@
 import eventlet; eventlet.monkey_patch()
-import os, json, shutil, subprocess as _sp, psutil, gzip, time
+import os, json, shutil, subprocess, psutil, gzip, time, sys, platform, pathlib
 from flask import Flask, render_template, request, jsonify, send_file, abort, session
 from flask_socketio import SocketIO
 from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
@@ -27,13 +27,15 @@ os.makedirs(SERVERS_DIR, exist_ok=True)
 os.makedirs(BACKUPS_DIR, exist_ok=True)
 
 # Kill leftover process on 8080
-for cmd in [['fuser', '-k', f'{PORT}/tcp'], ['lsof', '-ti', f'tcp:{PORT}']]:
+try:
+    subprocess.run(['fuser', '-k', f'{PORT}/tcp'], capture_output=True, timeout=5)
+except Exception:
     try:
-        r = _sp.run(cmd, capture_output=True, text=True, timeout=5)
-        if cmd[0] == 'lsof' and r.stdout.strip():
-            for p in r.stdout.strip().splitlines(): _sp.run(['kill', '-9', p], capture_output=True, timeout=3)
-        break
-    except: pass
+        r = subprocess.run(['lsof', '-ti', f'tcp:{PORT}'], capture_output=True, text=True, timeout=5)
+        if r.stdout.strip():
+            for p in r.stdout.strip().splitlines(): subprocess.run(['kill', '-9', p], capture_output=True, timeout=3)
+    except Exception:
+        pass
 
 init_db(); init_auth(); setup_terminal_handlers(socketio); start_auto_backup_scheduler(); start_scanner()
 
@@ -189,7 +191,8 @@ def api_server_delete(server_id):
 @require_permission('servers:start')
 def api_server_start(server_id):
     s = get_srv(server_id)
-    if get_server_process(server_id) and get_server_process(server_id).is_running: return jsonify({'status': 'already running'})
+    p = get_server_process(server_id)
+    if p and p.is_running: return jsonify({'status': 'already running'})
     jp = os.path.join(s['path'], s['jar_file']) if s['jar_file'] else None
     if not jp or not os.path.isfile(jp): return jsonify({'error': f'JAR file not found: {jp}'}), 400
     p = ServerProcess(server_id, s['path'], s['jar_file'], s['java_args'])
@@ -464,7 +467,7 @@ def api_server_upgrade(server_id):
     st = s['server_type']
     vs = get_versions(st)
     if not vs: return jsonify({'error': f'No versions found for {st}'}), 400
-    lv = vs[-1] if isinstance(vs, list) else vs[0]
+    lv = vs[-1]
     build = get_builds(st, lv)[-1] if st in ('paper', 'folia', 'purpur') and get_builds(st, lv) else None
     bp = os.path.join(s['path'], 'server.jar.backup'); oj = os.path.join(s['path'], s['jar_file'])
     if os.path.isfile(oj): shutil.copy2(oj, bp)
@@ -529,11 +532,12 @@ def api_update_install():
 @login_required
 @require_permission('system:admin')
 def api_admin_info():
-    import platform, datetime, sys
     users = get_users()
     total, used, free = shutil.disk_usage(SERVERS_DIR)
     servers = get_servers()
     db_size = os.path.getsize('instances.db') if os.path.isfile('instances.db') else 0
+    sdir_size = sum(f.stat().st_size for f in pathlib.Path(SERVERS_DIR).rglob('*') if f.is_file()) if os.path.isdir(SERVERS_DIR) else 0
+    bdir_size = sum(f.stat().st_size for f in pathlib.Path(BACKUPS_DIR).rglob('*') if f.is_file()) if os.path.isdir(BACKUPS_DIR) else 0
     return jsonify({
         'python': sys.version.split()[0],
         'platform': platform.platform(),
@@ -544,8 +548,8 @@ def api_admin_info():
         'servers_running': sum(1 for s in servers if s.get('status', {}).get('running')),
         'disk_total': total, 'disk_used': used, 'disk_free': free,
         'db_size': db_size,
-        'server_dir_size': sum(f.stat().st_size for f in __import__('pathlib').Path(SERVERS_DIR).rglob('*') if f.is_file()) if os.path.isdir(SERVERS_DIR) else 0,
-        'backups_dir_size': sum(f.stat().st_size for f in __import__('pathlib').Path(BACKUPS_DIR).rglob('*') if f.is_file()) if os.path.isdir(BACKUPS_DIR) else 0,
+        'server_dir_size': sdir_size,
+        'backups_dir_size': bdir_size,
     })
 
 if __name__ == '__main__':

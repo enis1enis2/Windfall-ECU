@@ -63,7 +63,14 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - All text responses (HTML/CSS/JS/JSON) are gzip-compressed via `app.py:after_request`.
 - `index.html` references `windfall.min.js` and `style.min.css` instead of 7 separate JS files.
 - Terminal redesigned to Pterodactyl-style layout: read-only xterm display, command input bar at bottom with `>` prompt, connection status dot indicator, no status bar. Terminal theme reads from CSS variables and respects light/dark mode (16 ANSI colors per theme, Pterodactyl-inspired palettes).
-- Secret admin panel hidden behind double-click on sidebar header ("Windfall ECU") — only accessible to admin role users. Shows system info, disk usage, user/server stats, uptime.
+- Secret admin panel visible via 🛡️ button in sidebar footer (admin role only), double-click on sidebar header ("Windfall ECU") as secondary trigger. Shows system info, disk usage, user/server stats, uptime via `GET /api/admin/info`. Refresh button in panel.
+- Logout button: "Log Out" in sidebar footer, calls `logoutUser()`.
+- CI/CD: Two-job GitHub workflow — `auto-fix` (trims trailing whitespace, ensures EOF newlines, commits with `[skip ci]`) and `validate` (Python/JS/HTML/CSS syntax checks, `str(e)` audit, `os.path.join` audit).
+- Live system metrics: Endpoint returns RAM/CPU/Disk, frontend auto-refreshes every 2s with color-coded progress bars.
+- Tests: pytest suite in `tests/` (conftest.py, test_path_util.py, test_auth.py, test_api.py, test_backup.py, test_plugin.py). Run via `python -m pytest tests/`. Fixtures use isolated temp DB + Flask test client.
+- Code quality: `python -m py_compile` for all `.py` files. CI validates every push/PR on main.
+- Backend patterns: `get_db()` context manager for all DB access (auto-commit/rollback), `_fetchone`/`_fetchall`/`_execute` helpers. `get_srv(id)` + `res(data)` helpers in `app.py`. Lazy init for import-time side effects (`_ensure_chunk_dir()` in `zip_importer.py`). `PRAGMA table_info` guards for ALTER TABLE migrations.
+- Port freeing: `_free_port()` in `server_manager.py` reads `server-port` from `server.properties`, runs `fuser -k PORT/tcp`, falls back to `lsof -ti :PORT | xargs kill -9`. Same pattern in `app.py` startup for the panel port.
 
 ## Env vars
 `GREATPANEL_SECRET`, `GREATPANEL_HOST`, `GREATPANEL_PORT`, `GREATPANEL_JAVA`, `GREATPANEL_ORIGIN`

@@ -1,4 +1,4 @@
-import requests, os, json, re, zipfile, io, shutil, xml.etree.ElementTree as ET
+import requests, os, json, re, xml.etree.ElementTree as ET
 from config import SERVERS_DIR
 from path_util import safe_join, safe_path, safe_write
 

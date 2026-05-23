@@ -34,7 +34,8 @@ def restore_backup(backup_id):
     if not server: return False, 'Server not found'
 
     from server_manager import get_server_process
-    if get_server_process(backup['server_id']) and get_server_process(backup['server_id']).is_running:
+    sp = get_server_process(backup['server_id'])
+    if sp and sp.is_running:
         return False, 'Stop the server before restoring a backup'
 
     bp, sp = backup['path'], server['path']

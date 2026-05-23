@@ -114,9 +114,9 @@ def list_installed(server_id):
     if not server: return []
     pd = os.path.join(server['path'], 'plugins')
     if not os.path.isdir(pd): return []
-    return sorted([{'filename': f, 'size': os.path.getsize(os.path.join(pd, f)),
-                    'modified': int(os.path.getmtime(os.path.join(pd, f)))}
-                   for f in os.listdir(pd) if f.endswith('.jar') and os.path.isfile(os.path.join(pd, f))],
+    return sorted([{'filename': f, 'size': os.path.getsize(safe_join(pd, f)),
+                    'modified': int(os.path.getmtime(safe_join(pd, f)))}
+                   for f in os.listdir(pd) if f.endswith('.jar') and os.path.isfile(safe_join(pd, f))],
                   key=lambda p: p['filename'])
 
 def delete_plugin(server_id, filename):

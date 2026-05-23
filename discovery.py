@@ -3,7 +3,6 @@ from config import SERVERS_DIR
 from models import get_servers, create_server
 from path_util import safe_join
 
-_scanner_stop = threading.Event()
 _scanner_thread = None
 _discovered_log = []
 
@@ -28,13 +27,13 @@ def _find_jar(server_dir):
             return f
     return None
 
-def _scan():
-    while not _scanner_stop.is_set():
+def _scan(stop):
+    while not stop.is_set():
         try:
             registered = {s['path'] for s in get_servers()}
             if os.path.isdir(SERVERS_DIR):
                 for entry in os.listdir(SERVERS_DIR):
-                    path = os.path.join(SERVERS_DIR, entry)
+                    path = safe_join(SERVERS_DIR, entry)
                     if not os.path.isdir(path): continue
                     if entry.startswith('_dl_'): continue
                     if path in registered: continue
@@ -48,16 +47,14 @@ def _scan():
                         pass
         except Exception:
             pass
-        _scanner_stop.wait(5)
+        stop.wait(5)
 
 def start_scanner():
     global _scanner_thread
     if _scanner_thread: return
-    _scanner_thread = threading.Thread(target=_scan, daemon=True)
+    stop = threading.Event()
+    _scanner_thread = threading.Thread(target=_scan, args=(stop,), daemon=True)
     _scanner_thread.start()
-
-def stop_scanner():
-    _scanner_stop.set()
 
 def get_discovered_log():
     return list(_discovered_log)

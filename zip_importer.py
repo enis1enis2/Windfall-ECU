@@ -3,7 +3,7 @@ from config import SERVERS_DIR
 from models import create_server, get_server
 from path_util import safe_path, safe_join, safe_write
 
-CHUNK_DIR = safe_join(SERVERS_DIR, '_chunks')
+CHUNK_DIR = safe_join(SERVERS_DIR, '_chunks') if os.path.isdir(SERVERS_DIR) else None
 CHUNK_SIZE = 4 * 1024 * 1024
 CHUNK_TTL = 600
 _progress_store = {}
@@ -18,6 +18,12 @@ def _sio():
         except Exception:
             _socketio_proxy = object()
     return _socketio_proxy if _socketio_proxy is not object() else None
+
+def _ensure_chunk_dir():
+    global CHUNK_DIR
+    if CHUNK_DIR is None:
+        CHUNK_DIR = safe_join(SERVERS_DIR, '_chunks')
+    return CHUNK_DIR
 
 def emit_progress(uid, percent, stage='uploading'):
     _progress_store[uid] = {'percent': percent, 'stage': stage}
@@ -83,7 +89,8 @@ def import_zip(file_storage, server_name=None):
 
 # --- Chunked upload ---
 def chunked_init(filename, total_size, server_name=None):
-    os.makedirs(CHUNK_DIR, exist_ok=True)
+    cd = _ensure_chunk_dir()
+    os.makedirs(cd, exist_ok=True)
     _clean_stale()
     cid = f'{int(time.time())}_{abs(hash(filename)) % 10000}'
     meta = {'cid': cid, 'filename': filename, 'total_size': total_size,
@@ -94,7 +101,7 @@ def chunked_init(filename, total_size, server_name=None):
     return cid
 
 def chunked_upload(cid, chunk_index, chunk_data):
-    cd = os.path.join(CHUNK_DIR, cid)
+    cd = os.path.join(_ensure_chunk_dir(), cid)
     os.makedirs(cd, exist_ok=True)
     with open(os.path.join(cd, str(chunk_index)), 'wb') as f:
         f.write(chunk_data)
@@ -111,7 +118,10 @@ def chunked_upload(cid, chunk_index, chunk_data):
     return True
 
 def chunked_finalize(cid):
-    mf = os.path.join(CHUNK_DIR, f'{cid}.meta')
+    cd = os.path.join(_ensure_chunk_dir(), cid)
+    mf = os.path.join(cd + '.meta') if False else os.path.join(CHUNK_DIR, f'{cid}.meta')
+    # Actually:
+    mf = os.path.join(_ensure_chunk_dir(), f'{cid}.meta')
     if not os.path.isfile(mf): return _make_result(error='Upload session not found')
     with open(mf) as f: meta = json.load(f)
     cd = os.path.join(CHUNK_DIR, cid)

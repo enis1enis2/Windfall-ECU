@@ -1,5 +1,4 @@
-import os
-import mimetypes
+import os, shutil, mimetypes
 from path_util import safe_join
 
 def _sf(base, *parts):
@@ -10,7 +9,7 @@ def _sf(base, *parts):
 
 def list_files(base_path, rel_path=''):
     full = _sf(base_path, rel_path) if rel_path else base_path
-    if not full or not full.startswith(os.path.normpath(base_path)):
+    if not full:
         return None, 'Access denied'
     os.makedirs(full, exist_ok=True)
     try:
@@ -51,7 +50,7 @@ def delete_entry(base_path, rel_path):
     if not f: return False, 'Access denied'
     if not os.path.exists(f): return False, 'Not found'
     try:
-        (__import__('shutil').rmtree if os.path.isdir(f) else os.remove)(f)
+        (shutil.rmtree if os.path.isdir(f) else os.remove)(f)
         return True, 'Deleted'
     except Exception: return False, 'Failed to delete'
 

@@ -91,4 +91,5 @@ def get_setting(key, default=None):
 
 def set_setting(key, value):
     with get_db() as c:
-        c.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', (key, value))
+        c.execute('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?',
+                  (key, value, value))

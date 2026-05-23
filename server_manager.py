@@ -69,10 +69,13 @@ class ServerProcess:
         try:
             subprocess.run(['fuser', '-k', f'{port}/tcp'], capture_output=True, timeout=5)
         except Exception:
-            try:
-                subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, timeout=5)
-            except Exception:
-                pass
+            pass
+        try:
+            r = subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, text=True, timeout=5)
+            if r.stdout.strip():
+                subprocess.run(['kill', '-9'] + r.stdout.strip().splitlines(), capture_output=True, timeout=3)
+        except Exception:
+            pass
 
     def start(self):
         if self.running:

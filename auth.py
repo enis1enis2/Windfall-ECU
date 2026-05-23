@@ -54,10 +54,9 @@ ROLES = {
 
 def init_auth():
     with get_db() as c:
-        try:
+        cols = [r[1] for r in c.execute('PRAGMA table_info(users)').fetchall()]
+        if 'role' not in cols:
             c.execute('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'admin\'')
-        except Exception:
-            pass
     if not _fetchone('SELECT COUNT(*) as c FROM users')['c']:
         pw_hash = generate_password_hash('admin')
         _execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
