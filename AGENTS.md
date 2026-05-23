@@ -38,6 +38,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `auto_backup.py` | Background scheduler for automatic backups (customizable interval, retention, enable/disable) |
 | `docker_manager.py` | Docker container lifecycle (build/run/stop) |
 | `zip_importer.py` | ZIP import with server type detection from JAR filename |
+| `discovery.py` | Background scanner — polls SERVERS_DIR every 5s, auto-registers unmanaged dirs containing JARs |
 | `update_manager.py` | Git fetch/pull (with `git stash` before pull to avoid local changes blocking merge), pip install, restart for panel self-update |
 | `path_util.py` | Shared path safety (`safe_join`, `safe_path`, `safe_write`, `sanitize_name`) |
 | `build.sh` | Static asset build script (bundles JS via esbuild, minifies CSS via csso) |
@@ -55,6 +56,8 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - File paths are always sanitized and checked against a base path prefix to prevent traversal. All user-controlled path construction uses `safe_join` from `path_util.py` (raises ValueError on traversal) instead of raw `os.path.join` + manual prefix check. Fixed CodeQL path traversal alerts in `plugin_downloader.py` (delete_plugin) and `backup_manager.py` (create_backup) — both now use `safe_join` + `sanitize_name`.
 - `SERVERS_DIR`/`BACKUPS_DIR` created on startup, entries are gitignored.
 - `eula=true` written automatically on every server creation.
+- **Server discovery** runs every 5s via `discovery.py:start_scanner()` — polls `SERVERS_DIR`, auto-registers any directory not in the DB that contains a `.jar` file. Skip directories starting with `_dl_`.
+- **Import system** supports two paths: direct upload (files ≤10MB) and chunked upload (4MB chunks with 3 retries for slow networks). Chunked flow: `init` → N×`upload` → `finalize`. Progress tracked per session ID, available via SocketIO event `import_progress` and `GET /api/import/progress/<uid>`.
 - Static assets are built via `npm run build` (`build.sh`). The app falls back to source files if built files are missing.
 - Launch scripts (`launch.sh`/`launch.bat`) auto-build if Node.js is detected.
 - All text responses (HTML/CSS/JS/JSON) are gzip-compressed via `app.py:after_request`.
