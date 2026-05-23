@@ -3,7 +3,6 @@ import subprocess
 import os
 import signal
 import threading
-import time
 import shlex
 from collections import deque
 from config import JAVA_BIN
@@ -34,10 +33,6 @@ class ConsoleBuffer:
                 return '', total
             result = ''.join(list(self.lines)[pos:])
             return result, total
-
-    def get_all(self):
-        with self.lock:
-            return ''.join(self.lines), len(self.lines)
 
 
 class ServerProcess:
@@ -85,7 +80,7 @@ class ServerProcess:
         os.makedirs(os.path.join(self.workdir, 'logs'), exist_ok=True)
         self._free_port()
 
-        java_opts = ['-Dlog4j.configurationFile=log4j2.xml', '-Dconsole.encoding=UTF-8']
+        java_opts = ['-Dconsole.encoding=UTF-8']
         cmd = [JAVA_BIN] + java_opts + shlex.split(self.java_args) + ['-jar', self.jar_file, 'nogui']
 
         self.process = subprocess.Popen(

@@ -159,8 +159,6 @@ def _download_modded(meta_url, jar_name, version, server_name, server_type):
     if not isinstance(meta, dict): return None, 'Invalid meta response'
 
     iv = meta.get('inheritsFrom', version)
-    mc = meta.get('mainClass', {})
-    mc = mc.get('server', '') if isinstance(mc, dict) else ''
 
     d = fetch_json(VANILLA_MANIFEST)
     tv = next((v for v in d.get('versions', []) if v['id'] == iv), None)

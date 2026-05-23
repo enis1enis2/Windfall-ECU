@@ -465,7 +465,14 @@ async function loadUser() {
 }
 
 try { loadTheme(); } catch (e) { /* theme toggle may not exist in cached html */ }
-loadUser().then(() => loadServers());
+loadUser().then(() => loadServers()).then(() => {
+  if (currentUserRole === 'admin') {
+    const abtn = document.getElementById('admin-btn');
+    if (abtn) abtn.style.display = '';
+    const header = document.querySelector('.sidebar-header h1');
+    if (header) { header.style.cursor = 'pointer'; header.addEventListener('dblclick', adminPanelTrigger); }
+  }
+});
 
 function logoutUser() {
   fetch('/api/auth/logout', { method: 'POST' }).then(() => {
@@ -675,13 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkForUpdates();
   updateInterval = setInterval(checkForUpdates, 60000);
 
-  /* Secret admin panel trigger */
-  if (currentUserRole === 'admin') {
-    const abtn = document.getElementById('admin-btn');
-    if (abtn) abtn.style.display = '';
-    const header = document.querySelector('.sidebar-header h1');
-    if (header) { header.style.cursor = 'pointer'; header.addEventListener('dblclick', adminPanelTrigger); }
-  }
+  /* Secret admin panel trigger — now in loadUser().then() */
 
   /* Modal overlay click-dismiss */
   document.querySelectorAll('.modal-overlay').forEach(el => {

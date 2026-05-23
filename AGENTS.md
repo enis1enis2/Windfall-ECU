@@ -71,6 +71,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - Code quality: `python -m py_compile` for all `.py` files. CI validates every push/PR on main.
 - Backend patterns: `get_db()` context manager for all DB access (auto-commit/rollback), `_fetchone`/`_fetchall`/`_execute` helpers. `get_srv(id)` + `res(data)` helpers in `app.py`. Lazy init for import-time side effects (`_ensure_chunk_dir()` in `zip_importer.py`). `PRAGMA table_info` guards for ALTER TABLE migrations.
 - Port freeing: `_free_port()` in `server_manager.py` reads `server-port` from `server.properties`, runs `fuser -k PORT/tcp`, falls back to `lsof -ti :PORT | xargs kill -9`. Same pattern in `app.py` startup for the panel port.
+- **Known pitfalls**: Admin panel button/dblclick must be set in `loadUser().then()` not `DOMContentLoaded` because `currentUserRole` isn't fetched yet. All `CHUNK_DIR` access in `zip_importer.py` must go through `_ensure_chunk_dir()` (lazy init).
 
 ## Env vars
 `GREATPANEL_SECRET`, `GREATPANEL_HOST`, `GREATPANEL_PORT`, `GREATPANEL_JAVA`, `GREATPANEL_ORIGIN`

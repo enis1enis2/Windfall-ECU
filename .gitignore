@@ -10,3 +10,4 @@ node_modules/
 .venv/
 token.txt
 .restart.sh
+windfall-android

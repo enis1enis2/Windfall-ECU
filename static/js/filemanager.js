@@ -1,5 +1,4 @@
 let currentFilePath = '';
-let fileTreeCache = {};
 
 async function loadFiles(serverId) {
   const panel = document.getElementById('file-panel');
@@ -9,7 +8,6 @@ async function loadFiles(serverId) {
       <div class="empty-state"><p>Select a file to view or edit</p></div>
     </div>
   `;
-  fileTreeCache = {};
   currentFilePath = '';
   await renderFileTree(serverId, '');
 }

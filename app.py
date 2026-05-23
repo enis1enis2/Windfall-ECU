@@ -40,8 +40,8 @@ except Exception:
 init_db(); init_auth(); setup_terminal_handlers(socketio); start_auto_backup_scheduler(); start_scanner()
 
 # --- Compression & caching ---
-COMPRESS_TYPES = {'text/html', 'text/css', 'application/javascript', 'application/json',
-                  'text/javascript', 'text/plain', 'application/xml'}
+COMPRESS_TYPES = frozenset({'text/html', 'text/css', 'application/javascript', 'application/json',
+                  'text/javascript', 'text/plain', 'application/xml'})
 @app.after_request
 def _compress(resp):
     if resp.status_code < 200 or resp.status_code >= 300: return resp

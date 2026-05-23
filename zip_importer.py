@@ -95,7 +95,7 @@ def chunked_init(filename, total_size, server_name=None):
     cid = f'{int(time.time())}_{abs(hash(filename)) % 10000}'
     meta = {'cid': cid, 'filename': filename, 'total_size': total_size,
             'server_name': server_name, 'chunks': [], 'started': time.time()}
-    with open(os.path.join(CHUNK_DIR, f'{cid}.meta'), 'w') as f:
+    with open(os.path.join(_ensure_chunk_dir(), f'{cid}.meta'), 'w') as f:
         json.dump(meta, f)
     _progress_store[cid] = {'percent': 0, 'stage': 'init'}
     return cid
@@ -105,7 +105,7 @@ def chunked_upload(cid, chunk_index, chunk_data):
     os.makedirs(cd, exist_ok=True)
     with open(os.path.join(cd, str(chunk_index)), 'wb') as f:
         f.write(chunk_data)
-    mf = os.path.join(CHUNK_DIR, f'{cid}.meta')
+    mf = os.path.join(_ensure_chunk_dir(), f'{cid}.meta')
     if os.path.isfile(mf):
         with open(mf) as f: meta = json.load(f)
         if chunk_index not in meta['chunks']:
@@ -119,12 +119,10 @@ def chunked_upload(cid, chunk_index, chunk_data):
 
 def chunked_finalize(cid):
     cd = os.path.join(_ensure_chunk_dir(), cid)
-    mf = os.path.join(cd + '.meta') if False else os.path.join(CHUNK_DIR, f'{cid}.meta')
-    # Actually:
     mf = os.path.join(_ensure_chunk_dir(), f'{cid}.meta')
     if not os.path.isfile(mf): return _make_result(error='Upload session not found')
     with open(mf) as f: meta = json.load(f)
-    cd = os.path.join(CHUNK_DIR, cid)
+    cd = os.path.join(_ensure_chunk_dir(), cid)
     tmp = tempfile.mkdtemp()
     fpath = os.path.join(tmp, meta['filename'])
     try:
@@ -157,11 +155,11 @@ def chunked_finalize(cid):
         return _make_result(error='Import failed')
 
 def _clean_stale():
-    now = time.time()
-    if not os.path.isdir(CHUNK_DIR): return
-    for f in os.listdir(CHUNK_DIR):
-        fp = os.path.join(CHUNK_DIR, f)
+    cd = _ensure_chunk_dir()
+    if not os.path.isdir(cd): return
+    for f in os.listdir(cd):
+        fp = os.path.join(cd, f)
         if f.endswith('.meta') and now - os.path.getmtime(fp) > CHUNK_TTL:
             cid = f.replace('.meta', '')
-            shutil.rmtree(os.path.join(CHUNK_DIR, cid), ignore_errors=True)
+            shutil.rmtree(os.path.join(cd, cid), ignore_errors=True)
             os.remove(fp)
