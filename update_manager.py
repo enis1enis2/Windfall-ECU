@@ -54,9 +54,10 @@ def check_updates():
 def install_updates():
     if not _git_available(): return {'success': False, 'error': 'git is not installed'}
     try:
-        _git('stash', timeout=10)
+        stash_was_empty = 'No local changes' in _git('stash', timeout=10).stderr
         r = _git('pull', 'origin', 'main', timeout=60)
-        _git('stash', 'drop', timeout=5)
+        if not stash_was_empty:
+            _git('stash', 'drop', timeout=5)
         if r.returncode == 0:
             try: subprocess.run([sys.executable, '-m', 'pip', 'install', '-r',
                                 os.path.join(BASE_DIR, 'requirements.txt'), '-q'],
@@ -66,30 +67,33 @@ def install_updates():
         return {'success': False, 'error': r.stderr}
     except: return {'success': False, 'error': 'Install failed'}
 
-def _write_restart_script():
+def _restart_script():
+    from config import PORT
     py = _find_python()
-    script = f'''#!/usr/bin/env bash
-sleep 2
+    app_path = os.path.join(BASE_DIR, 'app.py')
+    return f'''#!/usr/bin/env bash
+sleep 3
 cd "{BASE_DIR}"
-# Kill old process
-PID=$(lsof -ti tcp:8080 2>/dev/null || fuser 8080/tcp 2>/dev/null)
-[ -n "$PID" ] && kill $PID 2>/dev/null
+# Kill old process by port, retry
+fuser -k {PORT}/tcp 2>/dev/null
 sleep 1
-# Free port
-fuser -k 8080/tcp 2>/dev/null || true
-# Launch detached
-exec setsid "{py}" "{os.path.join(BASE_DIR, 'app.py')}" > /dev/null 2>&1
+fuser -k {PORT}/tcp 2>/dev/null || lsof -ti :{PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
+sleep 1
+# Launch detached (setsid may fail if already session leader; fallback to nohup)
+setsid "{py}" "{app_path}" > /dev/null 2>&1 &
+if [ $? -ne 0 ]; then
+    nohup "{py}" "{app_path}" > /dev/null 2>&1 &
+fi
+disown
 '''
+
+def schedule_restart():
+    py = _find_python()
+    app_path = os.path.join(BASE_DIR, 'app.py')
+    script = _restart_script()
     with open(_RESTART_SCRIPT, 'w') as f:
         f.write(script)
     os.chmod(_RESTART_SCRIPT, 0o755)
-
-def _do_restart():
-    _write_restart_script()
     subprocess.Popen(['bash', _RESTART_SCRIPT], cwd=BASE_DIR,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
-    os._exit(0)
-
-def schedule_restart():
-    threading.Thread(target=_do_restart, daemon=True).start()
