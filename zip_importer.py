@@ -1,7 +1,7 @@
-import os, zipfile, tempfile, shutil, time, json
+import os, zipfile, tempfile, shutil, time, json, re
 from config import SERVERS_DIR
 from models import create_server, get_server
-from path_util import safe_path, safe_join, safe_write
+from path_util import safe_path, safe_join, safe_write, sanitize_name
 
 CHUNK_DIR = safe_join(SERVERS_DIR, '_chunks') if os.path.isdir(SERVERS_DIR) else None
 CHUNK_SIZE = 4 * 1024 * 1024
@@ -95,45 +95,47 @@ def chunked_init(filename, total_size, server_name=None):
     cid = f'{int(time.time())}_{abs(hash(filename)) % 10000}'
     meta = {'cid': cid, 'filename': filename, 'total_size': total_size,
             'server_name': server_name, 'chunks': [], 'started': time.time()}
-    with open(os.path.join(_ensure_chunk_dir(), f'{cid}.meta'), 'w') as f:
+    with open(safe_join(_ensure_chunk_dir(), sanitize_name(cid) + '.meta'), 'w') as f:
         json.dump(meta, f)
     _progress_store[cid] = {'percent': 0, 'stage': 'init'}
     return cid
 
 def chunked_upload(cid, chunk_index, chunk_data):
-    cd = os.path.join(_ensure_chunk_dir(), cid)
+    cs = sanitize_name(cid)
+    cd = safe_join(_ensure_chunk_dir(), cs)
     os.makedirs(cd, exist_ok=True)
-    with open(os.path.join(cd, str(chunk_index)), 'wb') as f:
+    ci = str(int(chunk_index)) if isinstance(chunk_index, (int, float)) else str(chunk_index)
+    with open(safe_join(cd, ci), 'wb') as f:
         f.write(chunk_data)
-    mf = os.path.join(_ensure_chunk_dir(), f'{cid}.meta')
+    mf = safe_join(_ensure_chunk_dir(), f'{cs}.meta')
     if os.path.isfile(mf):
         with open(mf) as f: meta = json.load(f)
         if chunk_index not in meta['chunks']:
             meta['chunks'].append(chunk_index); meta['chunks'].sort()
             meta['total'] = len(meta['chunks'])
-            sent = sum(os.path.getsize(os.path.join(cd, str(i))) for i in meta['chunks'] if os.path.isfile(os.path.join(cd, str(i))))
+            sent = sum(os.path.getsize(safe_join(cd, str(i))) for i in meta['chunks'] if os.path.isfile(safe_join(cd, str(i))))
             pct = min(99, int(sent / meta['total_size'] * 100)) if meta['total_size'] else 0
             emit_progress(cid, pct, 'uploading')
         with open(mf, 'w') as f: json.dump(meta, f)
     return True
 
 def chunked_finalize(cid):
-    cd = os.path.join(_ensure_chunk_dir(), cid)
-    mf = os.path.join(_ensure_chunk_dir(), f'{cid}.meta')
+    cs = sanitize_name(cid)
+    cd = safe_join(_ensure_chunk_dir(), cs)
+    mf = safe_join(_ensure_chunk_dir(), f'{cs}.meta')
     if not os.path.isfile(mf): return _make_result(error='Upload session not found')
     with open(mf) as f: meta = json.load(f)
-    cd = os.path.join(_ensure_chunk_dir(), cid)
     tmp = tempfile.mkdtemp()
-    fpath = os.path.join(tmp, meta['filename'])
+    fpath = safe_join(tmp, sanitize_name(meta['filename']))
     try:
         with open(fpath, 'wb') as out:
             for ci in sorted(meta['chunks']):
-                cp = os.path.join(cd, str(ci))
+                cp = safe_join(cd, str(int(ci)))
                 if os.path.isfile(cp):
                     with open(cp, 'rb') as cf: out.write(cf.read())
                     os.remove(cp)
         emit_progress(cid, 100, 'extracting')
-        ed = os.path.join(tmp, 'extracted')
+        ed = safe_join(tmp, 'extracted')
         os.makedirs(ed, exist_ok=True)
         with zipfile.ZipFile(fpath) as zf: zf.extractall(ed)
         jars = _extract_jars(ed)
@@ -157,9 +159,11 @@ def chunked_finalize(cid):
 def _clean_stale():
     cd = _ensure_chunk_dir()
     if not os.path.isdir(cd): return
+    now = time.time()
     for f in os.listdir(cd):
-        fp = os.path.join(cd, f)
+        fn = sanitize_name(f)
+        fp = safe_join(cd, fn)
         if f.endswith('.meta') and now - os.path.getmtime(fp) > CHUNK_TTL:
             cid = f.replace('.meta', '')
-            shutil.rmtree(os.path.join(cd, cid), ignore_errors=True)
+            shutil.rmtree(safe_join(cd, sanitize_name(cid)), ignore_errors=True)
             os.remove(fp)
