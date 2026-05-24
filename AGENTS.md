@@ -5,11 +5,10 @@
 - **Frontend**: Vanilla JS (bundled to single file), xterm.js, Socket.IO client
 - **Build**: esbuild (JS bundle + minify), csso (CSS minify)
 - **Compression**: Automatic gzip for HTML/CSS/JS/JSON > 200 bytes
-- **No tests, no linter, no type checker, no formatter** configured
 
 ## Run
 ```bash
-# With static build (requires Node.js 18+, tested on 26.1):
+# With static build (requires Node.js 18+):
 npm install && npm run build
 pip install -r requirements.txt
 python app.py
@@ -45,6 +44,7 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `package.json` | Node.js dev dependencies (esbuild, csso) + `npm run build` |
 
 ## Key conventions
+- No tests. Never add unit tests, test frameworks, test directories, or test dependencies.
 - All API routes except auth require `@login_required` (session cookie).
 - `eventlet.monkey_patch()` must be the **very first import** in `app.py`.
 - No migration system — `init_db()` in `models.py` creates tables on startup.
@@ -62,7 +62,6 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - Logout button: "Log Out" in sidebar footer, calls `logoutUser()`.
 - CI/CD: Two-job GitHub workflow — `auto-fix` (trims trailing whitespace, ensures EOF newlines, commits with `[skip ci]`) and `validate` (Python/JS/HTML/CSS syntax checks, `str(e)` audit, `os.path.join` audit).
 - Live system metrics: Endpoint returns RAM/CPU/Disk, frontend auto-refreshes every 2s with color-coded progress bars.
-- No tests configured.
 - Code quality: `python -m py_compile` for all `.py` files. CI validates every push/PR on main.
 - Backend patterns: `get_db()` context manager for all DB access (auto-commit/rollback), `_fetchone`/`_fetchall`/`_execute` helpers. `get_srv(id)` + `res(data)` helpers in `app.py`. Lazy init for import-time side effects (`_ensure_chunk_dir()` in `zip_importer.py`). `PRAGMA table_info` guards for ALTER TABLE migrations.
 - Port freeing: `_free_port()` in `server_manager.py` reads `server-port` from `server.properties`, runs `fuser -k PORT/tcp`, falls back to `lsof -ti :PORT | xargs kill -9`. Same pattern in `app.py` startup for the panel port.

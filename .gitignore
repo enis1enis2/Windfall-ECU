@@ -11,3 +11,5 @@ node_modules/
 token.txt
 .restart.sh
 windfall-android
+.pytest_cache/
+tests/
