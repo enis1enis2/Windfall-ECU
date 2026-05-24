@@ -34,6 +34,7 @@
 - **ZIP Import** — Import existing server directories via drag-and-drop ZIP upload
 - **Server Properties Editor** — Edit `server.properties` directly from the UI
 - **Authentication** — Login/register system with session-based auth
+- **Admin Panel** — Secret four-tab dashboard with system overview, live memory/CPU/disk usage, process list with per-process RAM and uptime, storage breakdown, and discovery log (admin only)
 - **Dark/Light Theme** — Toggle between dark and light mode; terminal 16-color ANSI palette adapts per theme
 - **Docker Support** — Run servers in isolated Docker containers
 - **EULA Auto-Create** — `eula=true` written automatically on server creation
@@ -162,6 +163,12 @@ All endpoints except auth require authentication via session cookie.
 | `POST` | `/api/servers/:id/backups` | Create backup |
 | `POST` | `/api/backups/:id/restore` | Restore backup |
 | `DELETE` | `/api/backups/:id` | Delete backup |
+
+### Admin
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/admin/info` | System info, processes, storage, discovery log (admin only) |
 
 ### Download & Plugins
 

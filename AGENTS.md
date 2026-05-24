@@ -43,10 +43,6 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 | `path_util.py` | Shared path safety (`safe_join`, `safe_path`, `safe_write`, `sanitize_name`) |
 | `build.sh` | Static asset build script (bundles JS via esbuild, minifies CSS via csso) |
 | `package.json` | Node.js dev dependencies (esbuild, csso) + `npm run build` |
-| `static/js/windfall.min.js` | All 7 JS files bundled and minified into one (39 KB) |
-| `static/css/style.min.css` | Minified CSS (15 KB) |
-| `static/js/*.js` | Individual JS source files (app, backups, download, filemanager, import, plugins, terminal) |
-| `templates/login.html` / `index.html` | Two Jinja2 templates |
 
 ## Key conventions
 - All API routes except auth require `@login_required` (session cookie).
@@ -60,14 +56,13 @@ Server starts on `http://0.0.0.0:8080`. Default login: `admin`/`admin`.
 - **Import system** supports two paths: direct upload (files ≤10MB) and chunked upload (4MB chunks with 3 retries for slow networks). Chunked flow: `init` → N×`upload` → `finalize`. Progress tracked per session ID, available via SocketIO event `import_progress` and `GET /api/import/progress/<uid>`.
 - Static assets are built via `npm run build` (`build.sh`). The app falls back to source files if built files are missing.
 - Launch scripts (`launch.sh`/`launch.bat`) auto-build if Node.js is detected.
-- All text responses (HTML/CSS/JS/JSON) are gzip-compressed via `app.py:after_request`.
 - `index.html` references `windfall.min.js` and `style.min.css` instead of 7 separate JS files.
 - Terminal redesigned to Pterodactyl-style layout: read-only xterm display, command input bar at bottom with `>` prompt, connection status dot indicator, no status bar. Terminal theme reads from CSS variables and respects light/dark mode (16 ANSI colors per theme, Pterodactyl-inspired palettes).
-- Secret admin panel visible via 🛡️ button in sidebar footer (admin role only), double-click on sidebar header ("Windfall ECU") as secondary trigger. Shows system info, disk usage, user/server stats, uptime via `GET /api/admin/info`. Refresh button in panel.
+- Secret admin panel visible via 🛡️ button in sidebar footer (admin role only), double-click on sidebar header ("Windfall ECU") as secondary trigger. Four-tab layout (Overview, Processes, Storage, Discovery) via `GET /api/admin/info` — includes system info, RAM/CPU/disk bars, process list with PID/RAM/uptime, live discovery log. Refresh button in panel.
 - Logout button: "Log Out" in sidebar footer, calls `logoutUser()`.
 - CI/CD: Two-job GitHub workflow — `auto-fix` (trims trailing whitespace, ensures EOF newlines, commits with `[skip ci]`) and `validate` (Python/JS/HTML/CSS syntax checks, `str(e)` audit, `os.path.join` audit).
 - Live system metrics: Endpoint returns RAM/CPU/Disk, frontend auto-refreshes every 2s with color-coded progress bars.
-- Tests: pytest suite in `tests/` (conftest.py, test_path_util.py, test_auth.py, test_api.py, test_backup.py, test_plugin.py). Run via `python -m pytest tests/`. Fixtures use isolated temp DB + Flask test client.
+- No tests configured.
 - Code quality: `python -m py_compile` for all `.py` files. CI validates every push/PR on main.
 - Backend patterns: `get_db()` context manager for all DB access (auto-commit/rollback), `_fetchone`/`_fetchall`/`_execute` helpers. `get_srv(id)` + `res(data)` helpers in `app.py`. Lazy init for import-time side effects (`_ensure_chunk_dir()` in `zip_importer.py`). `PRAGMA table_info` guards for ALTER TABLE migrations.
 - Port freeing: `_free_port()` in `server_manager.py` reads `server-port` from `server.properties`, runs `fuser -k PORT/tcp`, falls back to `lsof -ti :PORT | xargs kill -9`. Same pattern in `app.py` startup for the panel port.

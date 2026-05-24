@@ -538,18 +538,39 @@ def api_admin_info():
     db_size = os.path.getsize('instances.db') if os.path.isfile('instances.db') else 0
     sdir_size = sum(f.stat().st_size for f in pathlib.Path(SERVERS_DIR).rglob('*') if f.is_file()) if os.path.isdir(SERVERS_DIR) else 0
     bdir_size = sum(f.stat().st_size for f in pathlib.Path(BACKUPS_DIR).rglob('*') if f.is_file()) if os.path.isdir(BACKUPS_DIR) else 0
+    from server_manager import _servers
+    procs = []
+    for sid, sp in list(_servers.items()):
+        srv = get_server(sid)
+        st = sp.get_status()
+        ram = 0
+        if st['running'] and sp.process:
+            try: ram = psutil.Process(sp.process.pid).memory_info().rss
+            except: pass
+        procs.append({'server_id': sid, 'server_name': srv['name'] if srv else '?',
+                       'pid': st.get('pid'), 'ram': ram, 'running': st['running'],
+                       'uptime': int(time.time() - sp.process.create_time()) if st['running'] and sp.process else 0})
     return jsonify({
         'python': sys.version.split()[0],
         'platform': platform.platform(),
+        'hostname': platform.node(),
         'uptime': time.time() - psutil.boot_time(),
+        'cpu_count': psutil.cpu_count(),
+        'cpu_freq': psutil.cpu_freq().current if psutil.cpu_freq() else 0,
+        'load_avg': [round(x, 2) for x in psutil.getloadavg()],
         'users_total': len(users),
         'users_by_role': {r: sum(1 for u in users if u.get('role') == r) for r in ('admin', 'operator', 'viewer')},
         'servers_total': len(servers),
         'servers_running': sum(1 for s in servers if s.get('status', {}).get('running')),
+        'processes': procs,
         'disk_total': total, 'disk_used': used, 'disk_free': free,
+        'disk_percent': round(used / total * 100, 1) if total else 0,
         'db_size': db_size,
         'server_dir_size': sdir_size,
         'backups_dir_size': bdir_size,
+        'ram': {'total': psutil.virtual_memory().total, 'used': psutil.virtual_memory().used,
+                'percent': psutil.virtual_memory().percent},
+        'discovery_log': get_discovered_log(),
     })
 
 if __name__ == '__main__':

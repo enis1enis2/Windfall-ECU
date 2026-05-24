@@ -578,6 +578,12 @@ function closeAdminPanel() {
 function adminPanelTrigger() {
   if (currentUserRole === 'admin') openAdminPanel();
 }
+let adminTab = 'overview';
+function switchAdminTab(tab) {
+  adminTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+  document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.toggle('active', el.id === `admin-tab-${tab}`));
+}
 async function loadAdminInfo() {
   const el = document.getElementById('admin-content');
   try {
@@ -585,34 +591,80 @@ async function loadAdminInfo() {
     const ups = Math.floor(d.uptime / 86400);
     const uph = Math.floor((d.uptime % 86400) / 3600);
     const upm = Math.floor((d.uptime % 3600) / 60);
-    const dp = d.disk_total ? (d.disk_used / d.disk_total * 100).toFixed(1) : 0;
+    const ramPct = d.ram.percent;
     el.innerHTML = `
-      <div class="admin-section">
-        <div class="admin-section-title">System</div>
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="overview" onclick="switchAdminTab('overview')">Overview</button>
+        <button class="admin-tab" data-tab="processes" onclick="switchAdminTab('processes')">Processes</button>
+        <button class="admin-tab" data-tab="storage" onclick="switchAdminTab('storage')">Storage</button>
+        <button class="admin-tab" data-tab="discovery" onclick="switchAdminTab('discovery')">Discovery</button>
+      </div>
+      <div class="admin-tab-content active" id="admin-tab-overview">
         <div class="admin-grid">
           <div class="admin-card">
-            <span class="admin-label">Python</span>
-            <span class="admin-value">${d.python}</span>
+            <span class="admin-label">Panel</span>
+            <span class="admin-value">Windfall ECU</span>
+            <span class="admin-sub">Python ${d.python} &middot; ${d.hostname}</span>
           </div>
           <div class="admin-card">
             <span class="admin-label">Platform</span>
-            <span class="admin-value">${escapeHtml(d.platform)}</span>
+            <span class="admin-value">${escapeHtml(d.platform.split(' ')[0] || d.platform)}</span>
+            <span class="admin-sub">${d.cpu_count} cores${d.cpu_freq ? ' @ ' + Math.round(d.cpu_freq) + 'MHz' : ''}</span>
           </div>
           <div class="admin-card">
-            <span class="admin-label">Host Uptime</span>
+            <span class="admin-label">System Uptime</span>
             <span class="admin-value">${ups}d ${uph}h ${upm}m</span>
+            <span class="admin-sub">Load: ${d.load_avg.join(', ')}</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Memory</span>
+            <span class="admin-value">${formatBytes(d.ram.used)} / ${formatBytes(d.ram.total)}</span>
+            <div class="admin-bar"><div class="admin-bar-fill" style="width:${ramPct}%;background:${ramPct > 80 ? 'var(--danger)' : ramPct > 60 ? 'var(--warning)' : 'var(--accent)'}"></div></div>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Users</span>
+            <span class="admin-value">${d.users_total}</span>
+            <span class="admin-sub">${d.users_by_role.admin} admin &middot; ${d.users_by_role.operator} operator &middot; ${d.users_by_role.viewer} viewer</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Servers</span>
+            <span class="admin-value">${d.servers_total}</span>
+            <span class="admin-sub">${d.servers_running} running &middot; ${d.servers_total - d.servers_running} stopped</span>
           </div>
           <div class="admin-card">
             <span class="admin-label">Database</span>
             <span class="admin-value">${formatBytes(d.db_size)}</span>
+            <span class="admin-sub">SQLite</span>
+          </div>
+          <div class="admin-card">
+            <span class="admin-label">Total Server Data</span>
+            <span class="admin-value">${formatBytes(d.server_dir_size)}</span>
+            <span class="admin-sub">+ ${formatBytes(d.backups_dir_size)} backups</span>
           </div>
         </div>
       </div>
-      <div class="admin-section">
-        <div class="admin-section-title">Storage</div>
+      <div class="admin-tab-content" id="admin-tab-processes">
+        ${d.processes.length ? '<div style="display:flex;flex-direction:column;gap:6px">' + d.processes.map(p => {
+          const upt = p.running ? (p.uptime >= 3600 ? Math.floor(p.uptime / 3600) + 'h ' + Math.floor((p.uptime % 3600) / 60) + 'm' : Math.floor(p.uptime / 60) + 'm ' + (p.uptime % 60) + 's') : '—';
+          return `<div class="admin-card" style="flex-direction:row;align-items:center;gap:12px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${p.running ? 'var(--success)' : 'var(--text-dim)'};flex-shrink:0"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.server_name)}</div>
+              <div style="font-size:11px;color:var(--text-dim)">PID ${p.pid || '—'} &middot; ${formatBytes(p.ram)} &middot; up ${upt}</div>
+            </div>
+          </div>`;
+        }).join('') + '</div>' : '<div class="empty-state" style="height:80px"><p>No server processes</p></div>'}
+      </div>
+      <div class="admin-tab-content" id="admin-tab-storage">
         <div class="admin-grid">
+          <div class="admin-card" style="grid-column:1/-1">
+            <span class="admin-label">Disk Usage</span>
+            <span class="admin-value">${formatBytes(d.disk_used)} / ${formatBytes(d.disk_total)}</span>
+            <div class="admin-bar" style="height:8px;margin-top:6px"><div class="admin-bar-fill" style="width:${d.disk_percent}%;background:${d.disk_percent > 90 ? 'var(--danger)' : d.disk_percent > 75 ? 'var(--warning)' : 'var(--accent)'}"></div></div>
+            <span class="admin-sub" style="margin-top:4px">${d.disk_percent}% used &middot; ${formatBytes(d.disk_free)} free</span>
+          </div>
           <div class="admin-card">
-            <span class="admin-label">Server Data</span>
+            <span class="admin-label">Server Files</span>
             <span class="admin-value">${formatBytes(d.server_dir_size)}</span>
           </div>
           <div class="admin-card">
@@ -620,26 +672,13 @@ async function loadAdminInfo() {
             <span class="admin-value">${formatBytes(d.backups_dir_size)}</span>
           </div>
           <div class="admin-card">
-            <span class="admin-label">Disk Usage</span>
-            <span class="admin-value">${formatBytes(d.disk_used)} / ${formatBytes(d.disk_total)}</span>
-            <div class="admin-bar"><div class="admin-bar-fill" style="width:${dp}%"></div></div>
+            <span class="admin-label">Database</span>
+            <span class="admin-value">${formatBytes(d.db_size)}</span>
           </div>
         </div>
       </div>
-      <div class="admin-section">
-        <div class="admin-section-title">Stats</div>
-        <div class="admin-grid">
-          <div class="admin-card">
-            <span class="admin-label">Total Users</span>
-            <span class="admin-value">${d.users_total}</span>
-            <span class="admin-sub">${d.users_by_role.admin} admin · ${d.users_by_role.operator} operator · ${d.users_by_role.viewer} viewer</span>
-          </div>
-          <div class="admin-card">
-            <span class="admin-label">Servers</span>
-            <span class="admin-value">${d.servers_total}</span>
-            <span class="admin-sub">${d.servers_running} running</span>
-          </div>
-        </div>
+      <div class="admin-tab-content" id="admin-tab-discovery">
+        ${d.discovery_log && d.discovery_log.length ? d.discovery_log.map(e => `<div style="font-size:12px;font-family:monospace;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text-muted)">${escapeHtml(e)}</div>`).join('') : '<div class="empty-state" style="height:60px"><p>No discovery events</p></div>'}
       </div>
     `;
   } catch {
