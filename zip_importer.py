@@ -149,7 +149,7 @@ def chunked_finalize(cid):
         return _make_result(sid)
     except ValueError as e:
         shutil.rmtree(tmp, ignore_errors=True); shutil.rmtree(cd, ignore_errors=True); os.remove(mf)
-        return _make_result(error=str(e))
+        return _make_result(error=e.args[0] if e.args else 'Import failed')
     except Exception:
         shutil.rmtree(tmp, ignore_errors=True); shutil.rmtree(cd, ignore_errors=True)
         return _make_result(error='Import failed')
