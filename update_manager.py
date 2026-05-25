@@ -74,16 +74,13 @@ def _restart_script():
     return f'''#!/usr/bin/env bash
 sleep 3
 cd "{BASE_DIR}"
-# Kill old process by port, retry
+# Kill old process by port
 fuser -k {PORT}/tcp 2>/dev/null
 sleep 1
 fuser -k {PORT}/tcp 2>/dev/null || lsof -ti :{PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
 sleep 1
-# Launch detached (setsid may fail if already session leader; fallback to nohup)
-setsid "{py}" "{app_path}" > /dev/null 2>&1 &
-if [ $? -ne 0 ]; then
-    nohup "{py}" "{app_path}" > /dev/null 2>&1 &
-fi
+# Launch detached
+nohup "{py}" "{app_path}" > /dev/null 2>&1 &
 disown
 '''
 
@@ -94,6 +91,5 @@ def schedule_restart():
     with open(_RESTART_SCRIPT, 'w') as f:
         f.write(script)
     os.chmod(_RESTART_SCRIPT, 0o755)
-    subprocess.Popen(['bash', _RESTART_SCRIPT], cwd=BASE_DIR,
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
+    # Use os.system to avoid eventlet subprocess patching issues with process groups
+    os.system(f'bash "{_RESTART_SCRIPT}" &')
