@@ -165,6 +165,21 @@
               <p class="primary-text">Drop a .zip file here or click to browse</p>
               <p class="secondary-text">The zip should contain a server JAR and config files (e.g. Paper, Spigot, Vanilla)</p>
             </div>
+            <div class="form-row" style="margin-top:10px">
+              <label>Server Type <span class="input-hint">(override auto-detection)</span></label>
+              <select id="import-type">
+                <option value="">Auto-detect</option>
+                <option value="paper">Paper</option>
+                <option value="folia">Folia</option>
+                <option value="purpur">Purpur</option>
+                <option value="spigot">Spigot</option>
+                <option value="vanilla">Vanilla</option>
+                <option value="fabric">Fabric</option>
+                <option value="quilt">Quilt</option>
+                <option value="forge">Forge</option>
+                <option value="neoforge">NeoForge</option>
+              </select>
+            </div>
             <input type="file" id="import-input" accept=".zip" style="display:none">
           </div>
         </div>

@@ -24,6 +24,8 @@ async function directUpload(file, zone) {
   const form = new FormData();
   form.append('file', file);
   form.append('name', file.name.replace('.zip', ''));
+  const sel = document.getElementById('import-type');
+  if (sel && sel.value) form.append('server_type', sel.value);
   const result = await api('POST', '/import/zip', form);
   onImportDone(result, zone);
 }
@@ -32,7 +34,8 @@ async function chunkedUpload(file, zone) {
   const CHUNK = 4 * 1024 * 1024;
   const total = file.size;
   const cid = (await api('POST', '/import/chunked/init', {
-    filename: file.name, total_size: total, name: file.name.replace('.zip', '')
+    filename: file.name, total_size: total, name: file.name.replace('.zip', ''),
+    server_type: (document.getElementById('import-type') || {}).value || ''
   })).cid;
 
   zone.innerHTML = `

@@ -334,7 +334,7 @@ def api_import_zip():
     if 'file' not in request.files: return jsonify({'error': 'No file uploaded'}), 400
     f = request.files['file']
     if not f.filename.endswith('.zip'): return jsonify({'error': 'File must be a .zip'}), 400
-    r = import_zip(f, request.form.get('name'))
+    r = import_zip(f, request.form.get('name'), request.form.get('server_type'))
     if r['error']: return jsonify({'error': r['error']}), 400
     s = get_server(r['id'])
     return jsonify({'id': r['id'], 'name': s['name'] if s else request.form.get('name'), 'status': 'imported'}), 201
@@ -344,7 +344,7 @@ def api_import_zip():
 @require_permission('import:zip')
 def api_chunked_init():
     d = request.json
-    cid = chunked_init(d['filename'], d['total_size'], d.get('name'))
+    cid = chunked_init(d['filename'], d['total_size'], d.get('name'), d.get('server_type'))
     return jsonify({'cid': cid, 'chunk_size': 4 * 1024 * 1024})
 
 @app.route('/api/import/chunked/<cid>/<int:chunk_index>', methods=['POST'])

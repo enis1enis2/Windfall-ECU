@@ -65,7 +65,7 @@ def _finalize(sp, jf, dt, sn):
     return create_server(name=sn, path=sp, jar_file=jf, server_type=dt), None
 
 # --- Standard import ---
-def import_zip(file_storage, server_name=None):
+def import_zip(file_storage, server_name=None, server_type=None):
     tmp = tempfile.mkdtemp()
     ed = os.path.join(tmp, 'extracted')
     os.makedirs(ed, exist_ok=True)
@@ -75,6 +75,7 @@ def import_zip(file_storage, server_name=None):
         jars = _extract_jars(ed)
         if not jars: shutil.rmtree(tmp); return _make_result(error='No .jar file found')
         jf, dt = _detect(jars)
+        if server_type: dt = server_type
         sn = server_name or (os.path.basename(jf).replace('.jar', '') or 'Imported Server')
         sp = safe_path(SERVERS_DIR, sn)
         e = None
@@ -88,13 +89,13 @@ def import_zip(file_storage, server_name=None):
     except Exception: shutil.rmtree(tmp); return _make_result(error='Import failed')
 
 # --- Chunked upload ---
-def chunked_init(filename, total_size, server_name=None):
+def chunked_init(filename, total_size, server_name=None, server_type=None):
     cd = _ensure_chunk_dir()
     os.makedirs(cd, exist_ok=True)
     _clean_stale()
     cid = f'{int(time.time())}_{abs(hash(filename)) % 10000}'
     meta = {'cid': cid, 'filename': filename, 'total_size': total_size,
-            'server_name': server_name, 'chunks': [], 'started': time.time()}
+            'server_name': server_name, 'server_type': server_type, 'chunks': [], 'started': time.time()}
     with open(safe_join(_ensure_chunk_dir(), sanitize_name(cid) + '.meta'), 'w') as f:
         json.dump(meta, f)
     _progress_store[cid] = {'percent': 0, 'stage': 'init'}
@@ -141,6 +142,7 @@ def chunked_finalize(cid):
         jars = _extract_jars(ed)
         if not jars: raise ValueError('No .jar file found')
         jf, dt = _detect(jars)
+        if meta.get('server_type'): dt = meta['server_type']
         sn = meta['server_name'] or (os.path.basename(jf).replace('.jar', '') or 'Imported Server')
         sp = safe_path(SERVERS_DIR, sn)
         if os.path.exists(sp): raise ValueError(f'Server "{os.path.basename(sp)}" already exists')

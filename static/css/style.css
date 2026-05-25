@@ -831,7 +831,9 @@ body {
 /* ==========================================================================
    Admin Panel
    ========================================================================== */
-.admin-layout {
+.input-hint {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
+}
   max-height: 480px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 16px;
 }
