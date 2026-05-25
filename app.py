@@ -241,6 +241,15 @@ def api_server_java_args(server_id):
     update_server(server_id, java_args=ja)
     return jsonify({'status': 'updated', 'java_args': ja})
 
+@app.route('/api/servers/<int:server_id>/type', methods=['PUT'])
+@login_required
+@require_permission('servers:edit')
+def api_server_type(server_id):
+    s = get_srv(server_id)
+    st = request.json.get('server_type', 'vanilla')
+    update_server(server_id, server_type=st)
+    return jsonify({'status': 'updated', 'server_type': st})
+
 # --- Files ---
 @app.route('/api/servers/<int:server_id>/files', methods=['GET'])
 @login_required

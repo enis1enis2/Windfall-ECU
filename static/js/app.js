@@ -220,8 +220,10 @@ function closeSettings() {
 
 async function saveSettings() {
   const args = document.getElementById('settings-args').value.trim();
+  const st = document.getElementById('settings-type').value;
   try {
     await api('PUT', `/servers/${activeServerId}/java_args`, { java_args: args });
+    await api('PUT', `/servers/${activeServerId}/type`, { server_type: st });
     notify('Settings saved', 'success');
     await loadServers();
     closeSettings();

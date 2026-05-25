@@ -9,7 +9,7 @@ ROLES = {
         'permissions': {
             'servers:list', 'servers:create', 'servers:get', 'servers:delete',
             'servers:start', 'servers:stop', 'servers:restart', 'servers:upgrade',
-            'servers:status', 'servers:java_args', 'servers:console',
+            'servers:status', 'servers:java_args', 'servers:console', 'servers:edit',
             'files:list', 'files:read', 'files:write', 'files:delete',
             'files:mkdir', 'files:upload', 'files:download',
             'backups:list', 'backups:create', 'backups:restore', 'backups:delete',
@@ -27,7 +27,7 @@ ROLES = {
         'permissions': {
             'servers:list', 'servers:create', 'servers:get',
             'servers:start', 'servers:stop', 'servers:restart', 'servers:upgrade',
-            'servers:status', 'servers:java_args', 'servers:console',
+            'servers:status', 'servers:java_args', 'servers:console', 'servers:edit',
             'files:list', 'files:read', 'files:write', 'files:delete',
             'files:mkdir', 'files:upload', 'files:download',
             'backups:list', 'backups:create', 'backups:restore', 'backups:delete',
