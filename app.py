@@ -12,7 +12,7 @@ from file_explorer import list_files, read_file, write_file, delete_entry, creat
 from zip_importer import import_zip, chunked_init, chunked_upload, chunked_finalize, get_progress
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
-from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin
+from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin, check_updates, update_plugin
 from auth import login_required, require_permission, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, change_role, delete_user, create_user, ROLES
 from auto_backup import start_auto_backup_scheduler
 from update_manager import check_updates, install_updates, schedule_restart
@@ -249,6 +249,14 @@ def api_server_type(server_id):
     st = request.json.get('server_type', 'vanilla')
     update_server(server_id, server_type=st)
     return jsonify({'status': 'updated', 'server_type': st})
+
+@app.route('/api/servers/<int:server_id>/version', methods=['PUT'])
+@login_required
+@require_permission('servers:edit')
+def api_server_version(server_id):
+    gv = (request.json or {}).get('game_version', '')
+    update_server(server_id, game_version=gv)
+    return jsonify({'status': 'updated', 'game_version': gv})
 
 # --- Files ---
 @app.route('/api/servers/<int:server_id>/files', methods=['GET'])
@@ -511,7 +519,9 @@ def api_server_upgrade(server_id):
 def api_plugins_search():
     q = request.args.get('q', '')
     if len(q) < 2: return jsonify([])
-    try: return jsonify(search_plugins(q, request.args.get('provider'), server_type=request.args.get('server_type')))
+    try: return jsonify(search_plugins(q, request.args.get('provider'),
+                         server_type=request.args.get('server_type'),
+                         game_version=request.args.get('game_version')))
     except: return jsonify({'error': 'Search failed'}), 500
 
 @app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
@@ -528,7 +538,8 @@ def api_plugin_install():
     d = request.json
     if not all([d.get('server_id'), d.get('provider'), d.get('project_id')]):
         return jsonify({'error': 'server_id, provider, project_id required'}), 400
-    return res(*install_plugin(d['server_id'], d['provider'], d['project_id'], d.get('version_id'), d.get('version_number')))
+    return res(*install_plugin(d['server_id'], d['provider'], d['project_id'],
+                d.get('version_id'), d.get('version_number'), d.get('game_version')))
 
 @app.route('/api/servers/<int:server_id>/plugins', methods=['GET'])
 @login_required
@@ -539,6 +550,19 @@ def api_plugins_list(server_id): return jsonify(list_installed(server_id))
 @login_required
 @require_permission('plugins:delete')
 def api_plugin_delete(server_id, filename): return res(*delete_plugin(server_id, filename))
+
+@app.route('/api/servers/<int:server_id>/plugins/updates', methods=['GET'])
+@login_required
+@require_permission('plugins:search')
+def api_plugin_updates(server_id): return jsonify(check_updates(server_id))
+
+@app.route('/api/servers/<int:server_id>/plugins/update', methods=['POST'])
+@login_required
+@require_permission('plugins:install')
+def api_plugin_update(server_id):
+    d = request.json
+    if not d.get('project_id'): return jsonify({'error': 'project_id required'}), 400
+    return res(*update_plugin(server_id, d['project_id'], d.get('version_id')))
 
 # --- Panel Auto-Update ---
 @app.route('/api/update/check', methods=['GET'])

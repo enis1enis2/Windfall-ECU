@@ -7,6 +7,7 @@ async function loadPlugins(serverId) {
       <div class="plugins-installed">
         <div class="plugins-header">
           <h4>Installed Plugins</h4>
+          <button class="btn btn-sm btn-outline" onclick="checkPluginUpdates(${serverId})" id="update-all-btn">Check Updates</button>
         </div>
         <div id="installed-plugins-list"><div class="spinner"></div></div>
       </div>
@@ -14,12 +15,7 @@ async function loadPlugins(serverId) {
         <div class="plugins-header">
           <h4>Browse Plugins</h4>
           <div class="plugin-search-bar">
-            <input type="text" id="plugin-search-input" placeholder="Search Modrinth & Hangar..." oninput="onSearchInput()">
-            <select id="plugin-provider" onchange="onSearchInput()">
-              <option value="">All providers</option>
-              <option value="modrinth">Modrinth</option>
-              <option value="hangar">Hangar</option>
-            </select>
+            <input type="text" id="plugin-search-input" placeholder="Search Modrinth..." oninput="onSearchInput()">
           </div>
         </div>
         <div id="plugin-search-results"><div class="empty-state"><p>Search for plugins above</p></div></div>
@@ -43,17 +39,59 @@ async function loadInstalledPlugins(serverId) {
       div.className = 'installed-plugin-item';
       const size = formatSize(p.size);
       const date = new Date(p.modified * 1000).toLocaleDateString();
+      const badge = p.tracked ? '<span class="badge badge-tracked" title="Tracked for updates">📡</span>' : '<span class="badge badge-untracked" title="Not tracked (installed manually)">?</span>';
       div.innerHTML = `
         <div class="plugin-info">
-          <div class="plugin-name">${escapeHtml(p.filename)}</div>
+          <div class="plugin-name">${badge} ${escapeHtml(p.filename)}</div>
           <div class="plugin-meta">${size} &middot; ${date}</div>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="deleteInstalledPlugin(${serverId}, '${escapeJs(p.filename)}')">Delete</button>
+        <div style="display:flex;gap:4px">
+          ${p.tracked ? `<button class="btn btn-sm btn-outline" onclick="updateSinglePlugin(${serverId}, '${escapeJs(p.project_id)}')" title="Update">↻</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="deleteInstalledPlugin(${serverId}, '${escapeJs(p.filename)}')">Delete</button>
+        </div>
       `;
       list.appendChild(div);
     });
   } catch (e) {
     list.innerHTML = `<div class="empty-state"><p>${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+async function checkPluginUpdates(serverId) {
+  const btn = document.getElementById('update-all-btn');
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  try {
+    const updates = await api('GET', `/servers/${serverId}/plugins/updates`);
+    if (!updates.length) {
+      notify('All plugins are up to date', 'success');
+      btn.textContent = 'Check Updates';
+      btn.disabled = false;
+      return;
+    }
+    for (const u of updates) {
+      try {
+        await api('POST', `/servers/${serverId}/plugins/update`, { project_id: u.project_id });
+        notify(`Updated ${escapeHtml(u.filename)} to ${u.latest_version}`, 'success');
+      } catch (e) {
+        notify(`Failed to update ${escapeHtml(u.filename)}: ${e.message}`, 'error');
+      }
+    }
+    await loadInstalledPlugins(serverId);
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+  btn.textContent = 'Check Updates';
+  btn.disabled = false;
+}
+
+async function updateSinglePlugin(serverId, projectId) {
+  try {
+    await api('POST', `/servers/${serverId}/plugins/update`, { project_id: projectId });
+    notify('Plugin updated', 'success');
+    await loadInstalledPlugins(serverId);
+  } catch (e) {
+    notify(e.message, 'error');
   }
 }
 
@@ -64,7 +102,6 @@ function onSearchInput() {
 
 async function doPluginSearch() {
   const q = document.getElementById('plugin-search-input').value.trim();
-  const provider = document.getElementById('plugin-provider').value;
   const container = document.getElementById('plugin-search-results');
 
   if (q.length < 2) {
@@ -76,10 +113,10 @@ async function doPluginSearch() {
 
   try {
     let url = `/plugins/search?q=${encodeURIComponent(q)}`;
-    if (provider) url += `&provider=${provider}`;
     if (activeServerId) {
       const server = await api('GET', `/servers/${activeServerId}`);
       if (server.server_type) url += `&server_type=${encodeURIComponent(server.server_type)}`;
+      if (server.game_version) url += `&game_version=${encodeURIComponent(server.game_version)}`;
     }
     const results = await api('GET', url);
     renderSearchResults(results);
@@ -153,10 +190,22 @@ async function showInstallDialog(provider, projectId, name, serverId) {
   try {
     const versions = await api('GET', `/plugins/versions/${provider}/${projectId}`);
     versionSel.innerHTML = '<option value="">Latest</option>';
+    const server = await api('GET', `/servers/${serverId}`);
+    const gv = server.game_version;
     versions.forEach(v => {
       const opt = document.createElement('option');
       opt.value = v.id;
-      opt.textContent = `${v.version_number} (${(v.game_versions || []).slice(0, 3).join(', ')})`;
+      let label = v.version_number;
+      if (v.game_versions && v.game_versions.length) {
+        label += ` (${v.game_versions.slice(0, 3).join(', ')})`;
+      }
+      if (gv && v.game_versions && v.game_versions.includes(gv)) {
+        label += ' ✅';
+      }
+      opt.textContent = label;
+      if (gv && v.game_versions && v.game_versions.includes(gv)) {
+        opt.selected = true;
+      }
       versionSel.appendChild(opt);
     });
   } catch (e) {
@@ -181,8 +230,14 @@ async function confirmInstall() {
   btn.textContent = 'Installing...';
 
   try {
+    let gv = '';
+    try {
+      const server = await api('GET', `/servers/${parseInt(serverId)}`);
+      gv = server.game_version || '';
+    } catch {}
     const body = { server_id: parseInt(serverId), provider, project_id: projectId };
     if (versionId) body.version_id = versionId;
+    if (gv) body.game_version = gv;
     await api('POST', '/plugins/install', body);
     notify('Plugin installed!', 'success');
     closeInstallDialog();
@@ -206,12 +261,17 @@ async function deleteInstalledPlugin(serverId, filename) {
   }
 }
 
-function formatDownloads(n) {
-  if (!n) return '0';
-  if (n >= 1000000) return `${(n/1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n/1000).toFixed(1)}k`;
-  return n.toString();
+function formatSize(bytes) {
+  if (!bytes) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  let i = 0, s = bytes;
+  while (s >= 1024 && i < u.length - 1) { s /= 1024; i++; }
+  return `${s.toFixed(1)} ${u[i]}`;
 }
 
-
-
+function formatDownloads(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n.toString();
+}

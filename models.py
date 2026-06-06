@@ -2,7 +2,7 @@ import contextlib
 import sqlite3
 from config import DATABASE
 
-ALLOWED_COLUMNS = {'name', 'path', 'jar_file', 'java_args', 'server_type', 'auto_start', 'docker_mode'}
+ALLOWED_COLUMNS = {'name', 'path', 'jar_file', 'java_args', 'server_type', 'game_version', 'auto_start', 'docker_mode'}
 
 @contextlib.contextmanager
 def get_db(row=False):
@@ -38,8 +38,10 @@ def init_db():
              path TEXT NOT NULL, jar_file TEXT,
              java_args TEXT DEFAULT '-Xmx1G -Xms1G',
              server_type TEXT DEFAULT 'vanilla',
+             game_version TEXT DEFAULT '',
              auto_start INTEGER DEFAULT 0, docker_mode INTEGER DEFAULT 0,
              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        c.execute("ALTER TABLE servers ADD COLUMN game_version TEXT DEFAULT ''")
         c.execute('''CREATE TABLE IF NOT EXISTS backups
             (id INTEGER PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL,
              name TEXT NOT NULL, path TEXT NOT NULL, size INTEGER DEFAULT 0,

@@ -210,6 +210,7 @@ function openSettings(serverId) {
   if (!server) return;
   document.getElementById('settings-name').value = server.name || '';
   document.getElementById('settings-type').value = server.server_type || '';
+  document.getElementById('settings-version').value = server.game_version || '';
   document.getElementById('settings-args').value = server.java_args || '';
   document.getElementById('settings-modal').classList.remove('hidden');
 }
@@ -221,9 +222,11 @@ function closeSettings() {
 async function saveSettings() {
   const args = document.getElementById('settings-args').value.trim();
   const st = document.getElementById('settings-type').value;
+  const gv = document.getElementById('settings-version').value.trim();
   try {
     await api('PUT', `/servers/${activeServerId}/java_args`, { java_args: args });
     await api('PUT', `/servers/${activeServerId}/type`, { server_type: st });
+    if (gv) await api('PUT', `/servers/${activeServerId}/version`, { game_version: gv });
     notify('Settings saved', 'success');
     await loadServers();
     closeSettings();

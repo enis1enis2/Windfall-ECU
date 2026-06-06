@@ -828,12 +828,18 @@ body {
   color: var(--accent); text-decoration: none;
 }
 
+.badge-tracked { cursor: help; font-size: 13px; }
+.badge-untracked { cursor: help; font-size: 13px; opacity: 0.5; filter: grayscale(1); }
+.installed-plugin-item .btn-outline { font-size: 12px; padding: 2px 8px; }
+.plugins-header h4 { margin: 0; }
+
 /* ==========================================================================
    Admin Panel
    ========================================================================== */
 .input-hint {
   font-size: 11px; color: var(--text-muted); font-weight: 400;
 }
+.admin-layout {
   max-height: 480px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 16px;
 }
