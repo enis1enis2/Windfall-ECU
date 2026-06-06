@@ -12,7 +12,7 @@ from file_explorer import list_files, read_file, write_file, delete_entry, creat
 from zip_importer import import_zip, chunked_init, chunked_upload, chunked_finalize, get_progress
 from docker_manager import check_docker
 from server_downloader import get_types, get_versions, get_builds, download_server
-from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin, check_updates, update_plugin, check_mismatched_plugins, fix_plugin
+from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin, check_updates, update_plugin, check_mismatched_plugins, fix_plugin, get_auto_update, set_auto_update, _auto_fix
 from auth import login_required, require_permission, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, change_role, delete_user, create_user, ROLES
 from auto_backup import start_auto_backup_scheduler
 from update_manager import check_updates as check_panel_updates, install_updates, schedule_restart
@@ -538,8 +538,11 @@ def api_plugin_install():
     d = request.json
     if not all([d.get('server_id'), d.get('provider'), d.get('project_id')]):
         return jsonify({'error': 'server_id, provider, project_id required'}), 400
-    return res(*install_plugin(d['server_id'], d['provider'], d['project_id'],
-                d.get('version_id'), d.get('version_number'), d.get('game_version')))
+    ok, msg = install_plugin(d['server_id'], d['provider'], d['project_id'],
+                d.get('version_id'), d.get('version_number'), d.get('game_version'))
+    if ok:
+        _auto_fix(d['server_id'])
+    return res(ok, msg)
 
 @app.route('/api/servers/<int:server_id>/plugins', methods=['GET'])
 @login_required
@@ -562,7 +565,10 @@ def api_plugin_updates(server_id): return jsonify(check_updates(server_id))
 def api_plugin_update(server_id):
     d = request.json
     if not d.get('project_id'): return jsonify({'error': 'project_id required'}), 400
-    return res(*update_plugin(server_id, d['project_id'], d.get('version_id')))
+    ok, msg = update_plugin(server_id, d['project_id'], d.get('version_id'))
+    if ok:
+        _auto_fix(server_id)
+    return res(ok, msg)
 
 @app.route('/api/servers/<int:server_id>/plugins/mismatched', methods=['GET'])
 @login_required
@@ -576,6 +582,20 @@ def api_plugins_fix(server_id):
     d = request.json
     if not d.get('project_id'): return jsonify({'error': 'project_id required'}), 400
     return res(*fix_plugin(server_id, d['project_id']))
+
+@app.route('/api/servers/<int:server_id>/plugins/auto-update', methods=['GET'])
+@login_required
+@require_permission('plugins:list')
+def api_auto_update_get(server_id):
+    return jsonify({'enabled': get_auto_update(server_id)})
+
+@app.route('/api/servers/<int:server_id>/plugins/auto-update', methods=['POST'])
+@login_required
+@require_permission('settings:write')
+def api_auto_update_set(server_id):
+    d = request.json
+    set_auto_update(server_id, bool(d.get('enabled', True)))
+    return jsonify({'status': 'saved', 'enabled': get_auto_update(server_id)})
 
 # --- Panel Auto-Update ---
 @app.route('/api/update/check', methods=['GET'])

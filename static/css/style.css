@@ -397,6 +397,15 @@ body {
 
 .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); }
 
+/* Toggle switch */
+.auto-toggle { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.auto-toggle input { display: none; }
+.auto-toggle .toggle-slider { width: 28px; height: 16px; background: var(--text-dim); border-radius: 8px; position: relative; transition: background .2s; }
+.auto-toggle .toggle-slider::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: transform .2s; }
+.auto-toggle input:checked + .toggle-slider { background: var(--accent); }
+.auto-toggle input:checked + .toggle-slider::after { transform: translateX(12px); }
+.auto-toggle .toggle-label { font-size: 11px; color: var(--text-dim); }
+
 /* ==========================================================================
    Workspaces, Panels, Containers
    ========================================================================== */

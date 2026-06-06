@@ -7,9 +7,14 @@ async function loadPlugins(serverId) {
       <div class="plugins-installed">
         <div class="plugins-header">
           <h4>Installed Plugins</h4>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-sm btn-outline" onclick="checkPluginUpdates(${serverId})" id="update-all-btn">Check Updates</button>
             <button class="btn btn-sm btn-warning" onclick="fixMismatchedPlugins(${serverId})" id="fix-mismatched-btn">Fix Mismatched</button>
+            <label class="auto-toggle" title="Auto-check for updates on tab load">
+              <input type="checkbox" id="auto-update-toggle" onchange="toggleAutoUpdate(${serverId})">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Auto</span>
+            </label>
           </div>
         </div>
         <div id="installed-plugins-list"><div class="spinner"></div></div>
@@ -26,7 +31,20 @@ async function loadPlugins(serverId) {
     </div>
   `;
   await loadInstalledPlugins(serverId);
-  checkPluginUpdates(serverId);
+  try {
+    const au = await api('GET', `/servers/${serverId}/plugins/auto-update`);
+    document.getElementById('auto-update-toggle').checked = au.enabled;
+    if (au.enabled) checkPluginUpdates(serverId);
+  } catch {}
+}
+
+async function toggleAutoUpdate(serverId) {
+  const enabled = document.getElementById('auto-update-toggle').checked;
+  try {
+    await api('POST', `/servers/${serverId}/plugins/auto-update`, { enabled });
+  } catch (e) {
+    notify('Failed to save auto-update setting', 'error');
+  }
 }
 
 async function loadInstalledPlugins(serverId) {

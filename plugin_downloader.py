@@ -15,6 +15,11 @@ def _filter_versions_by_loader(versions, allowed_loaders):
         return versions
     return [v for v in versions if any(l in v.get('loaders', []) for l in allowed_loaders)]
 
+def _filter_versions_by_game_version(versions, game_version):
+    if not game_version:
+        return versions
+    return [v for v in versions if game_version in v.get('game_versions', [])]
+
 def _modrinth_search(query, loaders=None, game_version=None, limit=24):
     params = {'query': query, 'limit': limit}
     facets = []
@@ -99,7 +104,11 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
             return False, 'No versions found'
 
         allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
-        compatible = _filter_versions_by_loader(versions, allowed)
+        gv = game_version or server.get('game_version', '')
+        by_loader = _filter_versions_by_loader(versions, allowed)
+        compatible = _filter_versions_by_game_version(by_loader, gv)
+        if not compatible:
+            compatible = by_loader
         if not compatible and allowed:
             compatible = versions
 
@@ -109,8 +118,8 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
         elif version_number:
             v = next((x for x in (compatible or versions) if x.get('version_number') == version_number), None)
         if not v:
-            if game_version:
-                v = next((x for x in (compatible or versions) if game_version in x.get('game_versions', [])), None)
+            if gv:
+                v = next((x for x in (compatible or versions) if gv in x.get('game_versions', [])), None)
             if not v and compatible:
                 v = compatible[0]
             if not v:
@@ -205,10 +214,14 @@ def _auto_recognize(server_id):
         _write_meta(server_id, meta)
 
 def check_updates(server_id):
+    from models import get_server
     _auto_recognize(server_id)
+    server = get_server(server_id)
     meta = _read_meta(server_id)
     if not meta:
         return []
+    allowed = SERVER_LOADER_MAP.get(server.get('server_type', '')) if server else None
+    gv = server.get('game_version', '') if server else ''
     updates = []
     changed = False
     for pid, info in meta.items():
@@ -216,7 +229,11 @@ def check_updates(server_id):
             versions = _modrinth_versions(pid)
             if not versions:
                 continue
-            latest = versions[0]
+            compatible = _filter_versions_by_game_version(
+                _filter_versions_by_loader(versions, allowed), gv)
+            if not compatible:
+                continue
+            latest = compatible[0]
             lv = latest.get('version_number', '')
             cv = info.get('version_number', '')
             if not cv:
@@ -261,7 +278,11 @@ def update_plugin(server_id, project_id, version_id=None):
         return False, 'No versions found'
 
     allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
-    compatible = _filter_versions_by_loader(versions, allowed)
+    gv = server.get('game_version', '')
+    compatible = _filter_versions_by_game_version(
+        _filter_versions_by_loader(versions, allowed), gv)
+    if not compatible:
+        compatible = _filter_versions_by_loader(versions, allowed)
 
     v = None
     if version_id:
@@ -390,6 +411,24 @@ def fix_plugin(server_id, project_id):
         return True, f'Fixed: replaced with {new_fn}'
     except Exception:
         return False, 'Fix failed'
+
+def _auto_fix(server_id):
+    mismatched = check_mismatched_plugins(server_id)
+    for m in mismatched:
+        if m.get('fix_version_id'):
+            try:
+                fix_plugin(server_id, m['project_id'])
+            except Exception:
+                pass
+
+def get_auto_update(server_id):
+    from models import get_setting
+    v = get_setting(f'auto_update_{server_id}', '1')
+    return v == '1'
+
+def set_auto_update(server_id, enabled):
+    from models import set_setting
+    set_setting(f'auto_update_{server_id}', '1' if enabled else '0')
 
 def list_installed(server_id):
     from models import get_server
