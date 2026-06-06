@@ -305,6 +305,7 @@ def update_plugin(server_id, project_id, version_id=None):
 
 def check_mismatched_plugins(server_id):
     from models import get_server
+    _auto_recognize(server_id)
     server = get_server(server_id)
     if not server:
         return []
@@ -340,6 +341,8 @@ def check_mismatched_plugins(server_id):
     return mismatched
 
 def fix_plugin(server_id, project_id):
+    from models import get_server
+    _auto_recognize(server_id)
     server = get_server(server_id)
     if not server:
         return False, 'Server not found'
