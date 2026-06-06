@@ -134,8 +134,8 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
             }
             _write_meta(server_id, meta)
             return True, f'Installed {fn}'
-        except Exception as e:
-            return False, f'Download failed: {str(e)}'
+        except Exception:
+            return False, 'Download failed'
 
     elif provider == 'hangar':
         return False, 'Hangar downloads require manual install. Visit the project page.'
@@ -215,8 +215,8 @@ def update_plugin(server_id, project_id, version_id=None):
         }
         _write_meta(server_id, meta)
         return True, f'Updated to {new_fn}'
-    except Exception as e:
-        return False, f'Update failed: {str(e)}'
+    except Exception:
+        return False, 'Update failed'
 
 def list_installed(server_id):
     from models import get_server
