@@ -419,7 +419,8 @@ def api_system_metrics():
     if c == 0:
         c = psutil.cpu_percent(interval=0.1)
     d = psutil.disk_usage('/')
-    return jsonify({'ram': {'total': m.total, 'used': m.used, 'percent': m.percent},
+    pct = round(m.used / m.total * 100, 1) if m.total else 0
+    return jsonify({'ram': {'total': m.total, 'used': m.used, 'percent': pct},
                     'cpu': {'percent': c}, 'disk': {'total': d.total, 'used': d.used, 'percent': d.percent}})
 
 @app.route('/api/servers/<int:server_id>/console/input', methods=['POST'])
