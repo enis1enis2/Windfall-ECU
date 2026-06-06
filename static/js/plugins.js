@@ -7,7 +7,10 @@ async function loadPlugins(serverId) {
       <div class="plugins-installed">
         <div class="plugins-header">
           <h4>Installed Plugins</h4>
-          <button class="btn btn-sm btn-outline" onclick="checkPluginUpdates(${serverId})" id="update-all-btn">Check Updates</button>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-outline" onclick="checkPluginUpdates(${serverId})" id="update-all-btn">Check Updates</button>
+            <button class="btn btn-sm btn-warning" onclick="fixMismatchedPlugins(${serverId})" id="fix-mismatched-btn">Fix Mismatched</button>
+          </div>
         </div>
         <div id="installed-plugins-list"><div class="spinner"></div></div>
       </div>
@@ -83,6 +86,43 @@ async function checkPluginUpdates(serverId) {
     notify(e.message, 'error');
   }
   btn.textContent = 'Check Updates';
+  btn.disabled = false;
+}
+
+async function fixMismatchedPlugins(serverId) {
+  const btn = document.getElementById('fix-mismatched-btn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  try {
+    const mismatched = await api('GET', `/servers/${serverId}/plugins/mismatched`);
+    if (!mismatched.length) {
+      notify('All plugins match this server type', 'success');
+      btn.textContent = 'Fix Mismatched';
+      btn.disabled = false;
+      return;
+    }
+    let fixed = 0, failed = 0;
+    for (const m of mismatched) {
+      if (!m.fix_version_id) {
+        notify(`Cannot fix ${escapeHtml(m.filename)}: ${m.reason}`, 'error');
+        failed++;
+        continue;
+      }
+      try {
+        await api('POST', `/servers/${serverId}/plugins/fix`, { project_id: m.project_id });
+        notify(`Fixed ${escapeHtml(m.filename)} (${m.reason})`, 'success');
+        fixed++;
+      } catch (e) {
+        notify(`Failed to fix ${escapeHtml(m.filename)}: ${e.message}`, 'error');
+        failed++;
+      }
+    }
+    notify(`Fixed ${fixed}, failed ${failed}`, fixed ? 'success' : 'error');
+    await loadInstalledPlugins(serverId);
+  } catch (e) {
+    notify(e.message, 'error');
+  }
+  btn.textContent = 'Fix Mismatched';
   btn.disabled = false;
 }
 

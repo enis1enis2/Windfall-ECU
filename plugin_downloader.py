@@ -10,6 +10,11 @@ SERVER_LOADER_MAP = {
     'quilt': ['quilt'], 'neoforge': ['neoforge'], 'forge': ['forge'], 'vanilla': None,
 }
 
+def _filter_versions_by_loader(versions, allowed_loaders):
+    if not allowed_loaders:
+        return versions
+    return [v for v in versions if any(l in v.get('loaders', []) for l in allowed_loaders)]
+
 def _modrinth_search(query, loaders=None, game_version=None, limit=24):
     params = {'query': query, 'limit': limit}
     facets = []
@@ -93,14 +98,21 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
         if not versions:
             return False, 'No versions found'
 
+        allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
+        compatible = _filter_versions_by_loader(versions, allowed)
+        if not compatible and allowed:
+            compatible = versions
+
         v = None
         if version_id:
-            v = next((x for x in versions if x['id'] == version_id), None)
+            v = next((x for x in (compatible or versions) if x['id'] == version_id), None)
         elif version_number:
-            v = next((x for x in versions if x.get('version_number') == version_number), None)
+            v = next((x for x in (compatible or versions) if x.get('version_number') == version_number), None)
         if not v:
             if game_version:
-                v = next((x for x in versions if game_version in x.get('game_versions', [])), None)
+                v = next((x for x in (compatible or versions) if game_version in x.get('game_versions', [])), None)
+            if not v and compatible:
+                v = compatible[0]
             if not v:
                 v = versions[0]
         if not v:
@@ -181,7 +193,8 @@ def _auto_recognize(server_id):
                     meta[r['id']] = {
                         'filename': f, 'project_id': r['id'],
                         'version_number': '', 'version_id': '',
-                        'name': r['name'], 'game_versions': [], 'loaders': [],
+                        'name': r['name'], 'game_versions': r.get('game_versions', []),
+                        'loaders': r.get('loaders', []),
                         'installed_at': int(__import__('time').time()),
                     }
                     changed = True
@@ -246,9 +259,15 @@ def update_plugin(server_id, project_id, version_id=None):
     versions = _modrinth_versions(project_id)
     if not versions:
         return False, 'No versions found'
+
+    allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
+    compatible = _filter_versions_by_loader(versions, allowed)
+
     v = None
     if version_id:
-        v = next((x for x in versions if x['id'] == version_id), None)
+        v = next((x for x in (compatible or versions) if x['id'] == version_id), None)
+    if not v and compatible:
+        v = compatible[0]
     if not v:
         v = versions[0]
     if not v:
@@ -283,6 +302,91 @@ def update_plugin(server_id, project_id, version_id=None):
         return True, f'Updated to {new_fn}'
     except Exception:
         return False, 'Update failed'
+
+def check_mismatched_plugins(server_id):
+    from models import get_server
+    server = get_server(server_id)
+    if not server:
+        return []
+    allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
+    if not allowed:
+        return []
+    meta = _read_meta(server_id)
+    mismatched = []
+    for pid, info in meta.items():
+        try:
+            installed_loaders = info.get('loaders', [])
+            if installed_loaders and any(l in allowed for l in installed_loaders):
+                continue
+            versions = _modrinth_versions(pid)
+            compatible = _filter_versions_by_loader(versions, allowed)
+            if not compatible:
+                mismatched.append({
+                    'project_id': pid, 'filename': info.get('filename', ''),
+                    'name': info.get('name', ''), 'reason': 'No version supports this server type',
+                    'fix_version': '', 'fix_version_id': '',
+                })
+                continue
+            best = compatible[0]
+            mismatched.append({
+                'project_id': pid, 'filename': info.get('filename', ''),
+                'name': info.get('name', ''),
+                'reason': f'Wrong loader: needs {"/".join(allowed)}',
+                'fix_version': best.get('version_number', ''),
+                'fix_version_id': best['id'],
+            })
+        except Exception:
+            pass
+    return mismatched
+
+def fix_plugin(server_id, project_id):
+    server = get_server(server_id)
+    if not server:
+        return False, 'Server not found'
+    allowed = SERVER_LOADER_MAP.get(server.get('server_type', ''))
+    if not allowed:
+        return False, 'No loader restriction for this server type'
+    meta = _read_meta(server_id)
+    if project_id not in meta:
+        return False, 'Plugin not tracked'
+    info = meta[project_id]
+    old_fn = info['filename']
+    plugins_dir = safe_join(server['path'], 'plugins')
+    versions = _modrinth_versions(project_id)
+    if not versions:
+        return False, 'No versions found'
+    compatible = _filter_versions_by_loader(versions, allowed)
+    if not compatible:
+        return False, 'No compatible version for this server type'
+    v = compatible[0]
+    files = v.get('files', [])
+    if not files:
+        return False, 'No downloadable files'
+    pf = next((f for f in files if f.get('primary')), files[0])
+    new_fn = pf['filename'].replace('../', '').replace('..\\', '')
+    try:
+        r = requests.get(pf['url'], stream=True, timeout=180)
+        r.raise_for_status()
+        new_fp = safe_join(plugins_dir, new_fn)
+        with open(new_fp, 'wb') as f:
+            for c in r.iter_content(8192):
+                f.write(c)
+        if old_fn != new_fn:
+            old_fp = safe_join(plugins_dir, old_fn)
+            if os.path.isfile(old_fp):
+                os.remove(old_fp)
+        meta[project_id] = {
+            'filename': new_fn, 'project_id': project_id,
+            'version_id': v['id'], 'version_number': v.get('version_number', ''),
+            'name': v.get('name', ''),
+            'game_versions': v.get('game_versions', []),
+            'loaders': v.get('loaders', []),
+            'installed_at': int(__import__('time').time()),
+        }
+        _write_meta(server_id, meta)
+        return True, f'Fixed: replaced with {new_fn}'
+    except Exception:
+        return False, 'Fix failed'
 
 def list_installed(server_id):
     from models import get_server
