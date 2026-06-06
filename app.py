@@ -15,7 +15,7 @@ from server_downloader import get_types, get_versions, get_builds, download_serv
 from plugin_downloader import search_plugins, get_versions as plugin_get_versions, install_plugin, list_installed, delete_plugin, check_updates, update_plugin
 from auth import login_required, require_permission, register_user, verify_user, init_auth, get_users, get_user_by_id, change_password, change_username, change_role, delete_user, create_user, ROLES
 from auto_backup import start_auto_backup_scheduler
-from update_manager import check_updates, install_updates, schedule_restart
+from update_manager import check_updates as check_panel_updates, install_updates, schedule_restart
 from discovery import start_scanner, get_discovered_log
 
 app = Flask(__name__)
@@ -568,7 +568,7 @@ def api_plugin_update(server_id):
 @app.route('/api/update/check', methods=['GET'])
 @login_required
 @require_permission('system:update')
-def api_update_check(): return jsonify(check_updates())
+def api_update_check(): return jsonify(check_panel_updates())
 
 @app.route('/api/update/install', methods=['POST'])
 @login_required

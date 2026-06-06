@@ -23,6 +23,7 @@ async function loadPlugins(serverId) {
     </div>
   `;
   await loadInstalledPlugins(serverId);
+  checkPluginUpdates(serverId);
 }
 
 async function loadInstalledPlugins(serverId) {
