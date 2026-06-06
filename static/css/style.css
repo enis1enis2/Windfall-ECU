@@ -675,6 +675,7 @@ body {
 .provider-badge { font-size: 10px; padding: 3px 8px; border-radius: var(--radius-sm); font-weight: 600; }
 .provider-modrinth { background: rgba(16, 185, 129, 0.1); color: #34d399; }
 .provider-hangar { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+.provider-spigot { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
 
 /* Fixed & Safe Line Clamping properties */
 .plugin-card-desc {

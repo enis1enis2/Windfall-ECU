@@ -23,7 +23,7 @@ async function loadPlugins(serverId) {
         <div class="plugins-header">
           <h4>Browse Plugins</h4>
           <div class="plugin-search-bar">
-            <input type="text" id="plugin-search-input" placeholder="Search Modrinth..." oninput="onSearchInput()">
+            <input type="text" id="plugin-search-input" placeholder="Search plugins..." oninput="onSearchInput()">
           </div>
         </div>
         <div id="plugin-search-results"><div class="empty-state"><p>Search for plugins above</p></div></div>

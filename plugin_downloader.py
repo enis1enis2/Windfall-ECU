@@ -2,12 +2,21 @@ import os, json, requests, re
 from path_util import safe_join
 
 MODRINTH_API = 'https://api.modrinth.com/v2'
+SPIGET_API = 'https://api.spiget.org/v2'
+HANGAR_API = 'https://hangar.papermc.io/api/v1'
 TIMEOUT = 30
 
 SERVER_LOADER_MAP = {
     'paper': ['bukkit', 'paper', 'purpur', 'spigot'], 'purpur': ['bukkit', 'paper', 'purpur', 'spigot'],
     'folia': ['bukkit', 'paper', 'purpur', 'spigot'], 'fabric': ['fabric'],
     'quilt': ['quilt'], 'neoforge': ['neoforge'], 'forge': ['forge'], 'vanilla': None,
+}
+
+HANGAR_PLATFORM_MAP = {
+    'PAPER': ['bukkit', 'paper', 'purpur', 'spigot'],
+    'WATERFALL': ['bukkit', 'paper', 'purpur', 'spigot'],
+    'VELOCITY': [],
+    'FABRIC': ['fabric'], 'QUILT': ['quilt'], 'FORGE': ['forge'], 'NEOFORGE': ['neoforge'],
 }
 
 def _filter_versions_by_loader(versions, allowed_loaders):
@@ -34,9 +43,47 @@ def _modrinth_search(query, loaders=None, game_version=None, limit=24):
         'provider': 'modrinth', 'id': h['project_id'], 'slug': h['slug'], 'name': h['title'],
         'description': (h.get('description') or '')[:200], 'downloads': h.get('downloads', 0),
         'icon_url': h.get('icon_url', ''), 'latest_version': h.get('latest_version', ''),
-        'game_versions': (h.get('versions') or [])[-3:], 'loaders': h.get('loaders', []),
+        'game_versions': (h.get('versions') or [])[-3:], 'loaders': h.get('categories', []),
         'project_url': f"https://modrinth.com/plugin/{h['slug']}", 'author': h.get('author', ''),
     } for h in d.get('hits', [])] if isinstance(d, dict) else []
+
+def _spiget_search(query, limit=20):
+    try:
+        r = requests.get(f'{SPIGET_API}/search/resources/{query}', params={'size': limit, 'field': 'name,description,tag'}, timeout=TIMEOUT)
+        if not r.ok:
+            return []
+        data = r.json()
+        return [{
+            'provider': 'spigot', 'id': str(h['id']), 'slug': str(h['id']),
+            'name': h['name'], 'description': (h.get('tag') or '')[:200],
+            'downloads': h.get('downloads', 0), 'icon_url': (h.get('icon') or {}).get('url', ''),
+            'latest_version': (h.get('version') or {}).get('name', ''),
+            'game_versions': (h.get('testedVersions') or [])[-3:],
+            'loaders': ['spigot', 'bukkit', 'paper'],
+            'project_url': f"https://www.spigotmc.org/resources/{h['id']}/",
+            'author': (h.get('author') or {}).get('name', ''),
+        } for h in data if isinstance(h, dict) and not (h.get('premium') and float((h.get('premium') or {}).get('price', 0)) > 0)]
+    except Exception:
+        return []
+
+def _hangar_search(query, limit=25):
+    try:
+        r = requests.get(f'{HANGAR_API}/projects', params={'q': query, 'limit': limit}, timeout=TIMEOUT)
+        if not r.ok:
+            return []
+        data = r.json()
+        hits = (data.get('result') or []) if isinstance(data, dict) else []
+        return [{
+            'provider': 'hangar', 'id': h['namespace']['slug'], 'slug': h['namespace']['slug'],
+            'name': h['name'], 'description': (h.get('description') or '')[:200],
+            'downloads': (h.get('stats') or {}).get('downloads', 0), 'icon_url': '',
+            'latest_version': '', 'game_versions': [],
+            'loaders': ['spigot', 'bukkit', 'paper'],
+            'project_url': f"https://hangar.papermc.io/{h['namespace']['owner']}/{h['namespace']['slug']}",
+            'author': h['namespace']['owner'],
+        } for h in hits if isinstance(h, dict)]
+    except Exception:
+        return []
 
 def search_plugins(query, provider=None, server_type=None, game_version=None):
     loaders = SERVER_LOADER_MAP.get(server_type) if server_type else None
@@ -48,6 +95,16 @@ def search_plugins(query, provider=None, server_type=None, game_version=None):
             results.extend(_modrinth_search(query, loaders=loaders, game_version=game_version))
         except Exception:
             pass
+    if provider in (None, 'spigot'):
+        try:
+            results.extend(_spiget_search(query))
+        except Exception:
+            pass
+    if provider in (None, 'hangar'):
+        try:
+            results.extend(_hangar_search(query))
+        except Exception:
+            pass
     results.sort(key=lambda p: p['downloads'], reverse=True)
     return results
 
@@ -55,12 +112,57 @@ def _modrinth_versions(project_id):
     d = requests.get(f'{MODRINTH_API}/project/{project_id}/version', timeout=TIMEOUT).json()
     return d if isinstance(d, list) else []
 
+def _spiget_versions(resource_id):
+    try:
+        r = requests.get(f'{SPIGET_API}/resources/{resource_id}/versions', params={'size': 50}, timeout=TIMEOUT)
+        if not r.ok:
+            return []
+        data = r.json()
+        return [{
+            'id': str(v['id']),
+            'version_number': v.get('name', ''),
+            'name': v.get('name', ''),
+            'game_versions': [],
+            'loaders': ['spigot', 'bukkit', 'paper'],
+            'files': [{'url': f'{SPIGET_API}/resources/{resource_id}/versions/{v["id"]}/download', 'primary': True, 'filename': f'{resource_id}-{v["id"]}.jar'}],
+        } for v in data if isinstance(v, dict)]
+    except Exception:
+        return []
+
+def _hangar_versions(slug):
+    try:
+        r = requests.get(f'{HANGAR_API}/projects/{slug}/versions', params={'limit': 50}, timeout=TIMEOUT)
+        if not r.ok:
+            return []
+        data = r.json()
+        hits = (data.get('result') or []) if isinstance(data, dict) else []
+        return [{
+            'id': v['name'],
+            'version_number': v['name'],
+            'name': v['name'],
+            'game_versions': list(set(
+                mv for p, deps in (v.get('platformDependencies') or {}).items()
+                for mv in (deps or []) if mv
+            )),
+            'loaders': list(set(
+                l for p in (v.get('platformDependencies') or {}).keys()
+                for l in HANGAR_PLATFORM_MAP.get(p, [])
+            )),
+            'files': [],
+        } for v in hits if isinstance(v, dict)]
+    except Exception:
+        return []
+
 def get_versions(provider, project_id):
     if provider == 'modrinth':
         try:
             return _modrinth_versions(project_id)
         except Exception:
             return []
+    elif provider == 'spigot':
+        return _spiget_versions(project_id)
+    elif provider == 'hangar':
+        return _hangar_versions(project_id)
     return []
 
 # --- Plugin metadata for tracking installed plugins ---
@@ -88,6 +190,24 @@ def _write_meta(server_id, meta):
         return
     with open(mp, 'w') as f:
         json.dump(meta, f, indent=2)
+
+def _write_meta_entry(meta, project_id, provider, filename, version_id, version_number, name, game_versions, loaders):
+    meta[project_id] = {
+        'provider': provider, 'filename': filename,
+        'project_id': project_id, 'version_id': version_id,
+        'version_number': version_number, 'name': name,
+        'game_versions': game_versions, 'loaders': loaders,
+        'installed_at': int(__import__('time').time()),
+    }
+
+def _download_jar(url, plugins_dir, filename):
+    r = requests.get(url, stream=True, timeout=180)
+    r.raise_for_status()
+    fp = safe_join(plugins_dir, filename)
+    with open(fp, 'wb') as f:
+        for c in r.iter_content(8192):
+            f.write(c)
+    return fp
 
 def install_plugin(server_id, provider, project_id, version_id=None, version_number=None, game_version=None):
     from models import get_server
@@ -135,31 +255,45 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
         fn = pf['filename'].replace('../', '').replace('..\\', '')
 
         try:
-            r = requests.get(pf['url'], stream=True, timeout=180)
-            r.raise_for_status()
-            fp = safe_join(plugins_dir, fn)
-            with open(fp, 'wb') as f:
-                for c in r.iter_content(8192):
-                    f.write(c)
-
+            _download_jar(pf['url'], plugins_dir, fn)
             meta = _read_meta(server_id)
-            meta[project_id] = {
-                'filename': fn,
-                'project_id': project_id,
-                'version_id': v['id'],
-                'version_number': v.get('version_number', ''),
-                'name': v.get('name', ''),
-                'game_versions': v.get('game_versions', []),
-                'loaders': v.get('loaders', []),
-                'installed_at': int(__import__('time').time()),
-            }
+            _write_meta_entry(meta, project_id, 'modrinth', fn,
+                v['id'], v.get('version_number', ''), v.get('name', ''),
+                v.get('game_versions', []), v.get('loaders', []))
             _write_meta(server_id, meta)
             return True, f'Installed {fn}'
         except Exception:
             return False, 'Download failed'
 
+    elif provider == 'spigot':
+        versions = _spiget_versions(project_id)
+        if not versions:
+            return False, 'No versions found'
+        v = None
+        if version_id:
+            v = next((x for x in versions if x['id'] == version_id), None)
+        if not v:
+            v = versions[0]
+        if not v:
+            return False, 'No suitable version found'
+        files = v.get('files', [])
+        if not files:
+            return False, 'No downloadable files'
+        pf = next((f for f in files if f.get('primary')), files[0])
+        try:
+            _download_jar(pf['url'], plugins_dir, pf['filename'])
+            meta = _read_meta(server_id)
+            _write_meta_entry(meta, project_id, 'spigot', pf['filename'],
+                v['id'], v.get('version_number', ''), v.get('name', ''),
+                v.get('game_versions', []), v.get('loaders', []))
+            _write_meta(server_id, meta)
+            return True, f'Installed {pf["filename"]}'
+        except Exception:
+            return False, 'Download failed'
+
     elif provider == 'hangar':
         return False, 'Hangar downloads require manual install. Visit the project page.'
+
     return False, 'Unknown provider'
 
 def _filename_to_search_term(filename):
@@ -192,26 +326,49 @@ def _auto_recognize(server_id):
         if not term:
             continue
         try:
-            results = _modrinth_search(term, limit=5)
+            results = _modrinth_search(term, limit=10)
             t_clean = term.lower().replace(' ', '').replace('-', '').replace('_', '')
+            found = False
             for r in results:
                 if r['id'] in meta:
                     continue
                 r_clean = r['name'].lower().replace(' ', '').replace('-', '').replace('_', '')
                 if t_clean in r_clean or r_clean in t_clean:
                     meta[r['id']] = {
-                        'filename': f, 'project_id': r['id'],
+                        'provider': 'modrinth', 'filename': f, 'project_id': r['id'],
                         'version_number': '', 'version_id': '',
                         'name': r['name'], 'game_versions': r.get('game_versions', []),
                         'loaders': r.get('loaders', []),
                         'installed_at': int(__import__('time').time()),
                     }
                     changed = True
+                    found = True
                     break
+            if not found:
+                slug = term.lower().replace(' ', '-').replace('_', '-')
+                proj = requests.get(f'{MODRINTH_API}/project/{slug}', timeout=TIMEOUT).json()
+                if isinstance(proj, dict) and proj.get('project_id') and proj['project_id'] not in meta:
+                    meta[proj['project_id']] = {
+                        'provider': 'modrinth', 'filename': f, 'project_id': proj['project_id'],
+                        'version_number': '', 'version_id': '',
+                        'name': proj.get('title', term),
+                        'game_versions': [], 'loaders': proj.get('categories', []),
+                        'installed_at': int(__import__('time').time()),
+                    }
+                    changed = True
         except Exception:
             pass
     if changed:
         _write_meta(server_id, meta)
+
+def _get_versions_by_provider(provider, project_id):
+    if provider == 'modrinth':
+        return _modrinth_versions(project_id)
+    elif provider == 'spigot':
+        return _spiget_versions(project_id)
+    elif provider == 'hangar':
+        return _hangar_versions(project_id)
+    return []
 
 def check_updates(server_id):
     from models import get_server
@@ -225,14 +382,15 @@ def check_updates(server_id):
     updates = []
     changed = False
     for pid, info in meta.items():
+        pv = info.get('provider', 'modrinth')
         try:
-            versions = _modrinth_versions(pid)
+            versions = _get_versions_by_provider(pv, pid)
             if not versions:
                 continue
             compatible = _filter_versions_by_game_version(
                 _filter_versions_by_loader(versions, allowed), gv)
             if not compatible:
-                continue
+                compatible = versions
             latest = compatible[0]
             lv = latest.get('version_number', '')
             cv = info.get('version_number', '')
@@ -250,6 +408,7 @@ def check_updates(server_id):
             if not cv or lv != cv:
                 updates.append({
                     'project_id': pid,
+                    'provider': pv,
                     'current_version': cv or '?',
                     'latest_version': lv,
                     'latest_version_id': latest['id'],
@@ -262,6 +421,18 @@ def check_updates(server_id):
         _write_meta(server_id, meta)
     return updates
 
+def _replace_plugin_file(plugins_dir, old_fn, new_fn, download_url):
+    r = requests.get(download_url, stream=True, timeout=180)
+    r.raise_for_status()
+    new_fp = safe_join(plugins_dir, new_fn)
+    with open(new_fp, 'wb') as f:
+        for c in r.iter_content(8192):
+            f.write(c)
+    if old_fn != new_fn:
+        old_fp = safe_join(plugins_dir, old_fn)
+        if os.path.isfile(old_fp):
+            os.remove(old_fp)
+
 def update_plugin(server_id, project_id, version_id=None):
     from models import get_server
     server = get_server(server_id)
@@ -271,9 +442,10 @@ def update_plugin(server_id, project_id, version_id=None):
     if project_id not in meta:
         return False, 'Plugin not tracked'
     info = meta[project_id]
+    pv = info.get('provider', 'modrinth')
     old_fn = info['filename']
     plugins_dir = safe_join(server['path'], 'plugins')
-    versions = _modrinth_versions(project_id)
+    versions = _get_versions_by_provider(pv, project_id)
     if not versions:
         return False, 'No versions found'
 
@@ -299,26 +471,10 @@ def update_plugin(server_id, project_id, version_id=None):
     pf = next((f for f in files if f.get('primary')), files[0])
     new_fn = pf['filename'].replace('../', '').replace('..\\', '')
     try:
-        r = requests.get(pf['url'], stream=True, timeout=180)
-        r.raise_for_status()
-        new_fp = safe_join(plugins_dir, new_fn)
-        with open(new_fp, 'wb') as f:
-            for c in r.iter_content(8192):
-                f.write(c)
-        if old_fn != new_fn:
-            old_fp = safe_join(plugins_dir, old_fn)
-            if os.path.isfile(old_fp):
-                os.remove(old_fp)
-        meta[project_id] = {
-            'filename': new_fn,
-            'project_id': project_id,
-            'version_id': v['id'],
-            'version_number': v.get('version_number', ''),
-            'name': v.get('name', ''),
-            'game_versions': v.get('game_versions', []),
-            'loaders': v.get('loaders', []),
-            'installed_at': int(__import__('time').time()),
-        }
+        _replace_plugin_file(plugins_dir, old_fn, new_fn, pf['url'])
+        _write_meta_entry(meta, project_id, pv, new_fn,
+            v['id'], v.get('version_number', ''), v.get('name', ''),
+            v.get('game_versions', []), v.get('loaders', []))
         _write_meta(server_id, meta)
         return True, f'Updated to {new_fn}'
     except Exception:
@@ -336,6 +492,9 @@ def check_mismatched_plugins(server_id):
     meta = _read_meta(server_id)
     mismatched = []
     for pid, info in meta.items():
+        pv = info.get('provider', 'modrinth')
+        if pv != 'modrinth':
+            continue
         try:
             installed_loaders = info.get('loaders', [])
             if installed_loaders and any(l in allowed for l in installed_loaders):
@@ -346,7 +505,7 @@ def check_mismatched_plugins(server_id):
                 mismatched.append({
                     'project_id': pid, 'filename': info.get('filename', ''),
                     'name': info.get('name', ''), 'reason': 'No version supports this server type',
-                    'fix_version': '', 'fix_version_id': '',
+                    'fix_version': '', 'fix_version_id': '', 'provider': pv,
                 })
                 continue
             best = compatible[0]
@@ -356,6 +515,7 @@ def check_mismatched_plugins(server_id):
                 'reason': f'Wrong loader: needs {"/".join(allowed)}',
                 'fix_version': best.get('version_number', ''),
                 'fix_version_id': best['id'],
+                'provider': pv,
             })
         except Exception:
             pass
@@ -374,9 +534,10 @@ def fix_plugin(server_id, project_id):
     if project_id not in meta:
         return False, 'Plugin not tracked'
     info = meta[project_id]
+    pv = info.get('provider', 'modrinth')
     old_fn = info['filename']
     plugins_dir = safe_join(server['path'], 'plugins')
-    versions = _modrinth_versions(project_id)
+    versions = _get_versions_by_provider(pv, project_id)
     if not versions:
         return False, 'No versions found'
     compatible = _filter_versions_by_loader(versions, allowed)
@@ -389,24 +550,10 @@ def fix_plugin(server_id, project_id):
     pf = next((f for f in files if f.get('primary')), files[0])
     new_fn = pf['filename'].replace('../', '').replace('..\\', '')
     try:
-        r = requests.get(pf['url'], stream=True, timeout=180)
-        r.raise_for_status()
-        new_fp = safe_join(plugins_dir, new_fn)
-        with open(new_fp, 'wb') as f:
-            for c in r.iter_content(8192):
-                f.write(c)
-        if old_fn != new_fn:
-            old_fp = safe_join(plugins_dir, old_fn)
-            if os.path.isfile(old_fp):
-                os.remove(old_fp)
-        meta[project_id] = {
-            'filename': new_fn, 'project_id': project_id,
-            'version_id': v['id'], 'version_number': v.get('version_number', ''),
-            'name': v.get('name', ''),
-            'game_versions': v.get('game_versions', []),
-            'loaders': v.get('loaders', []),
-            'installed_at': int(__import__('time').time()),
-        }
+        _replace_plugin_file(plugins_dir, old_fn, new_fn, pf['url'])
+        _write_meta_entry(meta, project_id, pv, new_fn,
+            v['id'], v.get('version_number', ''), v.get('name', ''),
+            v.get('game_versions', []), v.get('loaders', []))
         _write_meta(server_id, meta)
         return True, f'Fixed: replaced with {new_fn}'
     except Exception:
@@ -447,13 +594,16 @@ def list_installed(server_id):
         size = os.path.getsize(safe_join(pd, f))
         modified = int(os.path.getmtime(safe_join(pd, f)))
         tracked = None
+        provider = None
         for pid, info in meta.items():
             if info.get('filename') == f:
                 tracked = pid
+                provider = info.get('provider', 'modrinth')
                 break
         plugins.append({
             'filename': f, 'size': size, 'modified': modified,
             'tracked': bool(tracked), 'project_id': tracked,
+            'provider': provider,
         })
     return plugins
 
