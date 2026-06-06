@@ -141,11 +141,63 @@ def install_plugin(server_id, provider, project_id, version_id=None, version_num
         return False, 'Hangar downloads require manual install. Visit the project page.'
     return False, 'Unknown provider'
 
+def _filename_to_search_term(filename):
+    name = filename.replace('.jar', '').replace('.JAR', '')
+    name = re.sub(r'[-_](?:\d+\.\d+[\d.]*|mc\d+[\d.]*|v\d[\d.]*|universal|fabric|forge|neoforge|paper|spigot|bukkit|quilt)(?:[-_].*)?$', '', name, flags=re.I)
+    name = re.sub(r'^\[.*?\]\s*', '', name)
+    name = name.strip('-_ ')
+    return name if len(name) >= 2 else ''
+
+def _auto_recognize(server_id):
+    from models import get_server
+    server = get_server(server_id)
+    if not server:
+        return
+    pd = safe_join(server['path'], 'plugins')
+    if not os.path.isdir(pd):
+        return
+    meta = _read_meta(server_id)
+    changed = False
+    for f in sorted(os.listdir(pd)):
+        if not f.endswith('.jar'):
+            continue
+        fp = safe_join(pd, f)
+        if not os.path.isfile(fp):
+            continue
+        already = any(info.get('filename') == f for info in meta.values())
+        if already:
+            continue
+        term = _filename_to_search_term(f)
+        if not term:
+            continue
+        try:
+            results = _modrinth_search(term, limit=5)
+            t_clean = term.lower().replace(' ', '').replace('-', '').replace('_', '')
+            for r in results:
+                if r['id'] in meta:
+                    continue
+                r_clean = r['name'].lower().replace(' ', '').replace('-', '').replace('_', '')
+                if t_clean in r_clean or r_clean in t_clean:
+                    meta[r['id']] = {
+                        'filename': f, 'project_id': r['id'],
+                        'version_number': '', 'version_id': '',
+                        'name': r['name'], 'game_versions': [], 'loaders': [],
+                        'installed_at': int(__import__('time').time()),
+                    }
+                    changed = True
+                    break
+        except Exception:
+            pass
+    if changed:
+        _write_meta(server_id, meta)
+
 def check_updates(server_id):
+    _auto_recognize(server_id)
     meta = _read_meta(server_id)
     if not meta:
         return []
     updates = []
+    changed = False
     for pid, info in meta.items():
         try:
             versions = _modrinth_versions(pid)
@@ -153,10 +205,22 @@ def check_updates(server_id):
                 continue
             latest = versions[0]
             lv = latest.get('version_number', '')
-            if lv != info.get('version_number', ''):
+            cv = info.get('version_number', '')
+            if not cv:
+                for v in versions:
+                    for f in v.get('files', []):
+                        if f.get('filename', '') == info.get('filename', ''):
+                            cv = v.get('version_number', '')
+                            info['version_number'] = cv
+                            info['version_id'] = v['id']
+                            changed = True
+                            break
+                    if cv:
+                        break
+            if not cv or lv != cv:
                 updates.append({
                     'project_id': pid,
-                    'current_version': info.get('version_number', ''),
+                    'current_version': cv or '?',
                     'latest_version': lv,
                     'latest_version_id': latest['id'],
                     'filename': info.get('filename', ''),
@@ -164,6 +228,8 @@ def check_updates(server_id):
                 })
         except Exception:
             pass
+    if changed:
+        _write_meta(server_id, meta)
     return updates
 
 def update_plugin(server_id, project_id, version_id=None):
@@ -226,6 +292,7 @@ def list_installed(server_id):
     pd = safe_join(server['path'], 'plugins')
     if not os.path.isdir(pd):
         return []
+    _auto_recognize(server_id)
     meta = _read_meta(server_id)
     plugins = []
     for f in sorted(os.listdir(pd)):
