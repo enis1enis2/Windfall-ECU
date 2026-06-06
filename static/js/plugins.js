@@ -37,7 +37,7 @@ async function loadInstalledPlugins(serverId) {
     plugins.forEach(p => {
       const div = document.createElement('div');
       div.className = 'installed-plugin-item';
-      const size = formatSize(p.size);
+      const size = formatBytes(p.size);
       const date = new Date(p.modified * 1000).toLocaleDateString();
       const badge = p.tracked ? '<span class="badge badge-tracked" title="Tracked for updates">📡</span>' : '<span class="badge badge-untracked" title="Not tracked (installed manually)">?</span>';
       div.innerHTML = `
@@ -259,14 +259,6 @@ async function deleteInstalledPlugin(serverId, filename) {
   } catch (e) {
     notify(e.message, 'error');
   }
-}
-
-function formatSize(bytes) {
-  if (!bytes) return '0 B';
-  const u = ['B', 'KB', 'MB', 'GB'];
-  let i = 0, s = bytes;
-  while (s >= 1024 && i < u.length - 1) { s /= 1024; i++; }
-  return `${s.toFixed(1)} ${u[i]}`;
 }
 
 function formatDownloads(n) {

@@ -29,7 +29,7 @@ function renderBackups(backups, serverId) {
     const div = document.createElement('div');
     div.className = 'backup-item';
     const date = new Date(b.created_at + 'Z').toLocaleString();
-    const size = formatSize(b.size);
+    const size = formatBytes(b.size);
     div.innerHTML = `
       <div class="info">
         <div class="name">${escapeHtml(b.name)}</div>
@@ -76,11 +76,4 @@ async function deleteBackupById(backupId) {
   }
 }
 
-function formatSize(bytes) {
-  if (!bytes) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let i = 0;
-  let size = bytes;
-  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
-  return `${size.toFixed(1)} ${units[i]}`;
-}
+

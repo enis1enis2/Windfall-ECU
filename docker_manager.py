@@ -12,11 +12,11 @@ def check_docker():
 
 def create_docker_container(server_id, server_name, server_path, jar_file, java_args='-Xmx1G -Xms1G'):
     if not check_docker(): return False, 'Docker is not available'
-    import shlex, json
+    import shlex
     cn = f'windfall-ecu_{server_id}_{"".join(c if c.isalnum() or c in "_-" else "_" for c in server_name)}'
-    cmd = json.dumps(['java'] + shlex.split(java_args) + ['-jar', jar_file, 'nogui'])
+    args = shlex.split(java_args) + ['-jar', jar_file, 'nogui']
     with open(os.path.join(server_path, 'Dockerfile'), 'w') as f:
-        f.write(f'FROM openjdk:21-slim AS mc-server\nWORKDIR /server\nCOPY . /server/\nCMD {cmd}\n')
+        f.write(f'FROM openjdk:21-slim AS mc-server\nWORKDIR /server\nCOPY . /server/\nCMD {shlex.join(args)}\n')
     try:
         b = subprocess.run(['docker', 'build', '-t', cn, server_path], capture_output=True, text=True, timeout=120)
         if b.returncode != 0: return False, f'Docker build failed: {b.stderr[:500]}'

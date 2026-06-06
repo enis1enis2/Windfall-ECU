@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Check Python syntax
+        run: |
+          while IFS= read -r f; do
+            python -m py_compile "$f" || { echo "FAIL: $f"; exit 1; }
+          done < <(find . -name '*.py' -not -path './.venv/*' -not -path './.git/*' -not -path './servers/*' -not -path './backups/*')
+          echo "All Python OK"
+
+      - name: Audit str(e) in app code
+        run: |
+          if grep -rn --include='*.py' 'str(e)' . | grep -v '.venv/' | grep -v '.git/'; then
+            echo "FAIL: str(e) leaks exception details"; exit 1
+          fi
+          echo "PASS"
+
+      - name: Audit os.path.join without safe_join
+        run: |
+          for f in app.py server_downloader.py zip_importer.py plugin_downloader.py backup_manager.py file_explorer.py; do
+            [ -f "$f" ] || continue
+            grep -n 'os\.path\.join' "$f" | grep -v 'safe_join\|safe_path\|sanitize\|tmp\|SERVERS_DIR\|BACKUPS_DIR\|ed\|BASE_DIR' && echo "WARNING: $f uses os.path.join" || true
+          done
+
+      - name: Verify eventlet monkey_patch is first
+        run: |
+          head -5 app.py | grep -q 'eventlet.monkey_patch' || { echo "FAIL: eventlet.monkey_patch() must be first"; exit 1; }
+          echo "OK"
+
+      - name: Check JS syntax
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          for f in static/js/*.js; do
+            node --check "$f" || { echo "FAIL: $f"; exit 1; }
+          done
+          echo "All JS OK"
+
+      - name: Check CSS
+        run: |
+          for f in static/css/*.css; do
+            [ -f "$f" ] || continue
+            opens=$(grep -c '{' "$f") && closes=$(grep -c '}' "$f")
+            [ "$opens" = "$closes" ] || { echo "FAIL: $f brace mismatch"; exit 1; }
+          done
+          echo "CSS OK"
+
+      - name: Auto-fix whitespace
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for pat in "*.py" "*.js" "*.css" "*.html" "*.yml" "*.yaml" "*.md"; do
+            find . -name "$pat" -not -path './.git/*' -not -path './.venv/*' -not -path './servers/*' -not -path './backups/*' -exec sed -i 's/[[:space:]]*$//' {} + 2>/dev/null || true
+          done
+          git add -A
+          git diff --cached --quiet || git commit -m "auto: fix whitespace [skip ci]" && git push

@@ -1,106 +1,59 @@
-<div align="center">
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Windfall%20ECU-Minecraft%20Server%20Manager-818cf8?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4MThjZjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM2ExIDEgMCAwIDEgMSAxdjE2YTEgMSAwIDAgMS0yIDBWNGEgMSAxIDAgMCAxIDEtMXoiLz48cGF0aCBkPSJNNSA4YTEgMSAwIDAgMSAxIDF2NmExIDEgMCAwIDEtMiAwVjlhIDEgMSAwIDAgMSAxLTF6Ii8+PHBhdGggZD0iTTE5IDhhMSAxIDAgMCAxIDEgMXY2YTEgMSAwIDAgMS0yIDBWOWExIDEgMCAwIDEgMS0xeiIvPjwvc3ZnPg==">
+    <img src="https://img.shields.io/badge/Windfall%20ECU-Minecraft%20Server%20Manager-3b82f6?style=for-the-badge" alt="Windfall ECU">
+  </picture>
+</p>
 
-  ![Windfall ECU](https://img.shields.io/badge/Windfall%20ECU-Minecraft%20Server%20Manager-3b82f6?style=for-the-badge)
-  <br>
-  [![License: MIT](https://img.shields.io/badge/License-MIT-3b82f6?style=flat-square)](LICENSE)
-  [![Python](https://img.shields.io/badge/Python-3.8%2B-3b82f6?style=flat-square&logo=python&logoColor=white)](https://python.org)
-  [![Flask](https://img.shields.io/badge/Flask-3.1-3b82f6?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
-  [![Docker](https://img.shields.io/badge/Docker-ready-3b82f6?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+<p align="center">
+  <a href="https://github.com/enis1enis2/Windfall-ECU/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="License"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.8%2B-3b82f6?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://flask.palletsprojects.com"><img src="https://img.shields.io/badge/flask-3.1-3b82f6?style=flat-square&logo=flask&logoColor=white" alt="Flask"></a>
+  <a href="https://docker.com"><img src="https://img.shields.io/badge/docker-ready-3b82f6?style=flat-square&logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://github.com/enis1enis2/Windfall-ECU/actions"><img src="https://img.shields.io/github/actions/workflow/status/enis1enis2/Windfall-ECU/autofix.yml?style=flat-square&branch=main" alt="CI"></a>
+</p>
 
-  <h3>A self-hosted web-based Minecraft server management panel</h3>
-  <p>Start, stop, configure, back up, and update Minecraft servers entirely from your browser.</p>
-
-  <a href="#features">Features</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#manual-install">Manual Install</a> ·
-  <a href="#configuration">Configuration</a> ·
-  <a href="#docker">Docker</a> ·
-  <a href="#api">API</a>
-
-</div>
+<p align="center">
+  A self-hosted web panel for managing Minecraft servers — start, stop, configure, back up, and update entirely from your browser.
+</p>
 
 ---
 
 ## Features
 
-- **Server Lifecycle** — Start, stop, restart, and delete servers with a single click
-- **Web Terminal** — Pterodactyl-style live console: read-only xterm.js display, dedicated command input bar with `>` prompt, real-time WebSocket + polling fallback, connection status dot
-- **File Manager** — Browse, edit, upload, and delete server files
-- **Backup System** — Create, restore, and delete `.tar.gz` backups
-- **Auto Backup** — Scheduled backups with customizable interval and retention
-- **Plugin Manager** — Search and install plugins from Modrinth and Hangar
-- **Server Downloader** — Download Paper, Folia, Purpur, Vanilla, Fabric, Quilt, Forge, and NeoForge
-- **Auto-Upgrade** — Upgrade server JARs to the latest version with automatic backup
-- **ZIP Import** — Import existing server directories via drag-and-drop ZIP upload
-- **Server Properties Editor** — Edit `server.properties` directly from the UI
-- **Authentication** — Login/register system with session-based auth
-- **Admin Panel** — Secret four-tab dashboard with system overview, live memory/CPU/disk usage, process list with per-process RAM and uptime, storage breakdown, and discovery log (admin only)
-- **Dark/Light Theme** — Toggle between dark and light mode; terminal 16-color ANSI palette adapts per theme
-- **Docker Support** — Run servers in isolated Docker containers
-- **EULA Auto-Create** — `eula=true` written automatically on server creation
-- **Launch Arguments** — Customize JVM arguments per server
+- **Server Lifecycle** — Start, stop, restart, delete servers from the browser
+- **Web Terminal** — Pterodactyl-style live console with WebSocket + polling fallback
+- **File Manager** — Browse, edit, upload, delete server files
+- **Backup System** — Create, restore, delete `.tar.gz` backups with auto-scheduler
+- **Plugin Manager** — Search and install from Modrinth with automatic update tracking
+- **Server Downloader** — Paper, Folia, Purpur, Vanilla, Fabric, Quilt, Forge, NeoForge
+- **ZIP Import** — Drag-and-drop import with chunked upload support (>10MB)
+- **Server Discovery** — Auto-registers existing server directories
+- **Admin Dashboard** — System metrics, process list, storage breakdown, discovery log
+- **Role-Based Access** — Admin, operator, viewer roles with granular permissions
+- **Docker Support** — Run servers in isolated containers
 
 ---
 
-## Quick Start
-
-### One-Click Scripts
-
-| Platform | Script |
-|----------|--------|
-| Linux / macOS | `./launch.sh` |
-| Windows | Double-click `launch.bat` |
-
-The script installs Python and Java if missing, creates a virtual environment, installs dependencies, optionally sets up autostart, and launches the panel. If `node` is available, static assets are built automatically.
-
-> 💡 For the fastest possible experience, ensure Node.js 18+ is installed (tested on 26.1) — JS files are bundled and minified via esbuild, CSS via csso, and all text responses are gzip-compressed.
-
----
-
-## Manual Install
+## Quick start
 
 ```bash
-# Clone the repository
-git clone https://github.com/enis1enis2/GreatPanel.git
-cd GreatPanel
+git clone https://github.com/enis1enis2/Windfall-ECU.git
+cd Windfall-ECU
 
-# (Optional) Build optimized static assets
-# Requires Node.js 18+ — JS is bundled via esbuild, CSS via csso
+# (Optional) Build optimized assets — requires Node.js 18+
 npm install && npm run build
 
-# Create and activate a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate      # Linux/macOS
-# .venv\Scripts\activate        # Windows
-
-# Install dependencies
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Launch
 python app.py
 ```
 
-Open **http://localhost:8080** in your browser and log in with:
+Open **http://localhost:8080** — default login `admin`/`admin`.
 
-> **Username:** `admin` · **Password:** `admin`
-
-> ⚠️ Change the default password after first login!
-
-> 💡 The app works without the build step using the original JS/CSS files. `npm run build` bundles 7 JS files into 1 via esbuild, minifies CSS via csso. All text responses are gzip-compressed automatically. The terminal layout is Pterodactyl-inspired: read-only xterm display with a dedicated command input bar.
-
----
-
-## Configuration
-
-Windfall ECU is configured via environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GREATPANEL_SECRET` | `windfall-ecu-secret-change-me` | Flask secret key for sessions |
-| `GREATPANEL_HOST` | `0.0.0.0` | Web server bind address |
-| `GREATPANEL_PORT` | `8080` | Web server port |
-| `GREATPANEL_JAVA` | `java` | Java binary path |
-| `GREATPANEL_ORIGIN` | `http://localhost:8080` | CORS allowed origin |
+> Or run `./launch.sh` for an interactive setup with dependency checks and autostart.
 
 ---
 
@@ -110,38 +63,51 @@ Windfall ECU is configured via environment variables:
 docker compose up -d
 ```
 
-The Dockerfile uses `python:3.12-slim` with OpenJDK 21 JRE. Server data and backups are stored in mounted volumes.
+Multi-stage build: Node.js 22 → `python:3.12-slim` + OpenJDK 21 JRE. Server data and backups in mounted volumes.
+
+---
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GREATPANEL_SECRET` | `windfall-ecu-secret-change-me` | Flask session secret |
+| `GREATPANEL_HOST` | `0.0.0.0` | Bind address |
+| `GREATPANEL_PORT` | `8080` | HTTP port |
+| `GREATPANEL_JAVA` | `java` | Java binary path |
+| `GREATPANEL_ORIGIN` | `http://localhost:8080` | CORS origin |
 
 ---
 
 ## API
 
-All endpoints except auth require authentication via session cookie.
+All endpoints except auth require session cookie auth.
 
 ### Auth
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/auth/status` | Check authentication status |
+| `GET` | `/api/auth/status` | Check auth status |
 | `POST` | `/api/auth/login` | Log in |
-| `POST` | `/api/auth/register` | Register new user |
 | `POST` | `/api/auth/logout` | Log out |
 
 ### Servers
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/servers` | List all servers |
-| `POST` | `/api/servers` | Create a server |
-| `GET` | `/api/servers/:id` | Get server details |
-| `DELETE` | `/api/servers/:id` | Delete server and files |
+| `GET` | `/api/servers` | List servers |
+| `POST` | `/api/servers` | Create server |
+| `GET` | `/api/servers/:id` | Get server |
+| `DELETE` | `/api/servers/:id` | Delete server |
 | `POST` | `/api/servers/:id/start` | Start server |
 | `POST` | `/api/servers/:id/stop` | Stop server |
 | `POST` | `/api/servers/:id/restart` | Restart server |
-| `POST` | `/api/servers/:id/upgrade` | Upgrade server JAR |
-| `GET` | `/api/servers/:id/status` | Server running status |
-| `PUT` | `/api/servers/:id/java_args` | Update JVM arguments |
-| `GET` | `/api/servers/:id/console?since=N` | Console output since line N |
+| `POST` | `/api/servers/:id/upgrade` | Upgrade JAR |
+| `GET` | `/api/servers/:id/status` | Running status |
+| `PUT` | `/api/servers/:id/java_args` | Update JVM args |
+| `PUT` | `/api/servers/:id/type` | Update server type |
+| `PUT` | `/api/servers/:id/version` | Update game version |
+| `GET` | `/api/servers/:id/console?since=N` | Console output |
 
 ### Files
 
@@ -152,7 +118,7 @@ All endpoints except auth require authentication via session cookie.
 | `POST` | `/api/servers/:id/files/write` | Write file |
 | `POST` | `/api/servers/:id/files/delete` | Delete file |
 | `POST` | `/api/servers/:id/files/mkdir` | Create directory |
-| `POST` | `/api/servers/:id/files/upload` | Upload files |
+| `POST` | `/api/servers/:id/files/upload` | Upload file |
 | `GET` | `/api/servers/:id/files/download` | Download file |
 
 ### Backups
@@ -164,42 +130,54 @@ All endpoints except auth require authentication via session cookie.
 | `POST` | `/api/backups/:id/restore` | Restore backup |
 | `DELETE` | `/api/backups/:id` | Delete backup |
 
-### Admin
+### Plugins
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/admin/info` | System info, processes, storage, discovery log (admin only) |
-
-### Download & Plugins
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/download/types` | List server types |
-| `GET` | `/api/download/versions/:type` | List versions |
-| `GET` | `/api/download/builds/:type/:version` | List builds |
-| `POST` | `/api/download` | Download and create server |
-| `GET` | `/api/plugins/search` | Search plugins |
+| `GET` | `/api/plugins/search?q=&server_type=&game_version=` | Search Modrinth |
+| `GET` | `/api/plugins/versions/:provider/:project_id` | List versions |
 | `POST` | `/api/plugins/install` | Install plugin |
-| `GET` | `/api/servers/:id/plugins` | List installed plugins |
+| `GET` | `/api/servers/:id/plugins` | List installed |
+| `GET` | `/api/servers/:id/plugins/updates` | Check updates |
+| `POST` | `/api/servers/:id/plugins/update` | Update plugin |
 | `DELETE` | `/api/servers/:id/plugins/:file` | Delete plugin |
+
+### Downloader
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/download/types` | Server types |
+| `GET` | `/api/download/versions/:type` | Versions |
+| `GET` | `/api/download/builds/:type/:version` | Builds |
+| `POST` | `/api/download` | Download & create |
+
+### System
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/system/metrics` | RAM/CPU/Disk |
+| `GET` | `/api/admin/info` | Full admin info |
+| `GET` | `/api/update/check` | Check panel updates |
+| `POST` | `/api/update/install` | Update & restart |
 
 ---
 
 ## Stack
 
-- **Backend:** Flask, Flask-SocketIO, SQLite, Eventlet
-- **Frontend:** Vanilla JavaScript (bundled via esbuild), xterm.js (read-only terminal + command input bar), Socket.IO client
-- **Build:** esbuild (JS bundling + minify), csso (CSS minify)
-- **Compression:** Automatic gzip for HTML/CSS/JS/JSON responses
-- **Container:** Docker / Docker Compose
+| Layer | Technology |
+|-------|-----------|
+| Backend | Flask, Flask-SocketIO, Eventlet, SQLite |
+| Frontend | Vanilla JS + esbuild bundle, xterm.js, Socket.IO |
+| Build | esbuild (JS), csso (CSS) |
+| Compression | Automatic gzip >200B |
+| Container | Docker / Compose |
 
 ---
 
-<div align="center">
-  <p>
-    <a href="https://github.com/enis1enis2/GreatPanel">GitHub</a> ·
-    <a href="https://github.com/enis1enis2/GreatPanel/issues">Issues</a> ·
-    <a href="https://github.com/enis1enis2/GreatPanel/discussions">Discussions</a>
-  </p>
-  <p>Built with ❤️ for the Minecraft server community</p>
-</div>
+<p align="center">
+  <a href="https://github.com/enis1enis2/Windfall-ECU">GitHub</a>
+  ·
+  <a href="https://github.com/enis1enis2/Windfall-ECU/issues">Issues</a>
+  ·
+  <a href="https://github.com/enis1enis2/Windfall-ECU/discussions">Discussions</a>
+</p>

@@ -38,10 +38,10 @@ def restore_backup(backup_id):
     if sp and sp.is_running:
         return False, 'Stop the server before restoring a backup'
 
-    bp, sp = backup['path'], server['path']
+    bp, spath = backup['path'], server['path']
     if not os.path.isfile(bp): return False, 'Backup file not found'
 
-    tmp = sp + '_restore_tmp'
+    tmp = spath + '_restore_tmp'
     try:
         if os.path.exists(tmp): shutil.rmtree(tmp)
         with tarfile.open(bp, 'r:gz') as tar:

@@ -1,12 +1,12 @@
-import contextlib
-import sqlite3
+import contextlib, sqlite3
+from functools import lru_cache
 from config import DATABASE
 
 ALLOWED_COLUMNS = {'name', 'path', 'jar_file', 'java_args', 'server_type', 'game_version', 'auto_start', 'docker_mode'}
 
 @contextlib.contextmanager
 def get_db(row=False):
-    conn = sqlite3.connect(DATABASE, timeout=10)
+    conn = sqlite3.connect(DATABASE, timeout=10, check_same_thread=False)
     if row:
         conn.row_factory = sqlite3.Row
     try:
@@ -41,7 +41,10 @@ def init_db():
              game_version TEXT DEFAULT '',
              auto_start INTEGER DEFAULT 0, docker_mode INTEGER DEFAULT 0,
              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        c.execute("ALTER TABLE servers ADD COLUMN game_version TEXT DEFAULT ''")
+        try:
+            c.execute("ALTER TABLE servers ADD COLUMN game_version TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
         c.execute('''CREATE TABLE IF NOT EXISTS backups
             (id INTEGER PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL,
              name TEXT NOT NULL, path TEXT NOT NULL, size INTEGER DEFAULT 0,
