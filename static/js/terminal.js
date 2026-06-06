@@ -65,6 +65,8 @@ async function loadTerminal(serverId) {
 function sendCommand(serverId, data) {
   if (terminalState.socket && terminalState.socket.connected) {
     terminalState.socket.emit('terminal_input', { server_id: serverId, data });
+  } else {
+    api('POST', `/servers/${serverId}/console/input`, { data }).catch(() => {});
   }
 }
 

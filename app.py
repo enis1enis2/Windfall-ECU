@@ -414,9 +414,25 @@ def api_docker_check(): return jsonify({'available': check_docker()})
 @app.route('/api/system/metrics', methods=['GET'])
 @login_required
 def api_system_metrics():
-    m = psutil.virtual_memory(); c = psutil.cpu_percent(interval=0.2); d = psutil.disk_usage('/')
+    m = psutil.virtual_memory()
+    c = psutil.cpu_percent(interval=0)
+    if c == 0:
+        c = psutil.cpu_percent(interval=0.1)
+    d = psutil.disk_usage('/')
     return jsonify({'ram': {'total': m.total, 'used': m.used, 'percent': m.percent},
                     'cpu': {'percent': c}, 'disk': {'total': d.total, 'used': d.used, 'percent': d.percent}})
+
+@app.route('/api/servers/<int:server_id>/console/input', methods=['POST'])
+@login_required
+@require_permission('servers:console')
+def api_server_console_input(server_id):
+    p = get_server_process(server_id)
+    if not p or not p.is_running:
+        return jsonify({'error': 'Server not running'}), 400
+    data = (request.json or {}).get('data', '')
+    if data:
+        p.write_input(data)
+    return jsonify({'status': 'ok'})
 
 # --- Settings ---
 @app.route('/api/settings', methods=['GET'])
