@@ -135,6 +135,7 @@ fi
 # --- Autostart setup ---
 SERVICE_NAME="windfall-ecu"
 SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE_NAME.service"
+STARTED_VIA_SYSTEMD=false
 if confirm "Add Windfall ECU to startup?"; then
     mkdir -p "$HOME/.config/systemd/user"
     cat > "$SERVICE_FILE" <<EOF
@@ -152,10 +153,19 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 EOF
-    systemctl --user daemon-reload
-    systemctl --user enable --now "$SERVICE_NAME"
-    info "Windfall ECU added to startup (systemd user service)."
-    info "Manage: systemctl --user {start,stop,restart,status} $SERVICE_NAME"
+    if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] || [ -n "$XDG_RUNTIME_DIR" ]; then
+        systemctl --user daemon-reload
+        if systemctl --user enable --now "$SERVICE_NAME" 2>/dev/null; then
+            STARTED_VIA_SYSTEMD=true
+        fi
+    fi
+    if [ "$STARTED_VIA_SYSTEMD" = true ]; then
+        info "Windfall ECU added to startup (systemd user service)."
+        info "Manage: systemctl --user {start,stop,restart,status} $SERVICE_NAME"
+    else
+        info "Service file written to $SERVICE_FILE"
+        info "Enable manually: systemctl --user enable --now $SERVICE_NAME"
+    fi
 fi
 
 # --- Launch detached ---
@@ -166,14 +176,17 @@ echo "  Panel running in background. Close this terminal safely."
 printf "\n"
 
 # Detach with setsid (preferred) or nohup
-if command -v setsid &>/dev/null; then
-    setsid "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
-elif command -v nohup &>/dev/null; then
-    nohup "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
-else
-    "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
+# Skip if already launched by systemctl above
+if [ "$STARTED_VIA_SYSTEMD" != true ]; then
+    if command -v setsid &>/dev/null; then
+        setsid "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
+    elif command -v nohup &>/dev/null; then
+        nohup "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
+    else
+        "$PYTHON" "$SCRIPT_DIR/app.py" > /dev/null 2>&1 &
+    fi
+    disown
 fi
-disown
 
 # Check it started
 sleep 2
