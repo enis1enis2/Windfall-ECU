@@ -1,4 +1,5 @@
 let searchTimeout = null;
+let searchController = null;
 
 async function loadPlugins(serverId) {
   const container = document.getElementById('plugins-container');
@@ -24,6 +25,12 @@ async function loadPlugins(serverId) {
           <h4>Browse Plugins</h4>
           <div class="plugin-search-bar">
             <input type="text" id="plugin-search-input" placeholder="Search plugins..." oninput="onSearchInput()">
+            <select id="plugin-provider-filter" onchange="onSearchInput()" class="provider-filter-select">
+              <option value="">All</option>
+              <option value="modrinth">Modrinth</option>
+              <option value="spigot">Spigot</option>
+              <option value="hangar">Hangar</option>
+            </select>
           </div>
         </div>
         <div id="plugin-search-results"><div class="empty-state"><p>Search for plugins above</p></div></div>
@@ -61,10 +68,15 @@ async function loadInstalledPlugins(serverId) {
       div.className = 'installed-plugin-item';
       const size = formatBytes(p.size);
       const date = new Date(p.modified * 1000).toLocaleDateString();
-      const badge = p.tracked ? '<span class="badge badge-tracked" title="Tracked for updates">📡</span>' : '<span class="badge badge-untracked" title="Not tracked (installed manually)">?</span>';
+      const badge = p.tracked
+        ? `<span class="badge badge-tracked" title="Tracked for updates">\u{1F4E1}</span>`
+        : `<span class="badge badge-untracked" title="Not tracked (installed manually)">?</span>`;
+      const providerBadge = p.provider
+        ? `<span class="provider-badge provider-${p.provider}">${p.provider}</span>`
+        : '';
       div.innerHTML = `
         <div class="plugin-info">
-          <div class="plugin-name">${badge} ${escapeHtml(p.filename)}</div>
+          <div class="plugin-name">${badge} ${providerBadge} ${escapeHtml(p.filename)}</div>
           <div class="plugin-meta">${size} &middot; ${date}</div>
         </div>
         <div style="display:flex;gap:4px">
@@ -155,13 +167,18 @@ async function updateSinglePlugin(serverId, projectId) {
 }
 
 function onSearchInput() {
+  const controller = new AbortController();
+  if (searchController) searchController.abort();
+  searchController = controller;
   clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(doPluginSearch, 400);
+  searchTimeout = setTimeout(() => doPluginSearch(controller), 400);
 }
 
-async function doPluginSearch() {
+async function doPluginSearch(controller) {
   const q = document.getElementById('plugin-search-input').value.trim();
+  const filter = document.getElementById('plugin-provider-filter').value;
   const container = document.getElementById('plugin-search-results');
+  const signal = controller ? controller.signal : null;
 
   if (q.length < 2) {
     container.innerHTML = '<div class="empty-state"><p>Enter at least 2 characters to search</p></div>';
@@ -172,14 +189,18 @@ async function doPluginSearch() {
 
   try {
     let url = `/plugins/search?q=${encodeURIComponent(q)}`;
+    if (filter) url += `&provider=${encodeURIComponent(filter)}`;
     if (activeServerId) {
-      const server = await api('GET', `/servers/${activeServerId}`);
+      const server = await api('GET', `/servers/${activeServerId}`, null, signal);
+      if (signal && signal.aborted) return;
       if (server.server_type) url += `&server_type=${encodeURIComponent(server.server_type)}`;
       if (server.game_version) url += `&game_version=${encodeURIComponent(server.game_version)}`;
     }
-    const results = await api('GET', url);
+    const results = await api('GET', url, null, signal);
+    if (signal && signal.aborted) return;
     renderSearchResults(results);
   } catch (e) {
+    if (e.name === 'AbortError') return;
     container.innerHTML = `<div class="empty-state"><p>Search failed: ${escapeHtml(e.message)}</p></div>`;
   }
 }
@@ -206,6 +227,10 @@ function renderSearchResults(results) {
 
     const card = document.createElement('div');
     card.className = 'plugin-card';
+    const canInstall = p.installable !== false;
+    const installBtn = canInstall
+      ? `<button class="btn btn-success btn-sm" onclick="showInstallDialog('${escapeJs(p.provider)}', '${escapeJs(p.id)}', '${escapeJs(p.name)}', ${activeServerId})">Install</button>`
+      : `<button class="btn btn-secondary btn-sm" disabled title="Install not available for this provider">Install</button>`;
     card.innerHTML = `
       <div class="plugin-card-header">
         ${p.icon_url ? `<img src="${p.icon_url}" class="plugin-icon" onerror="this.style.display='none'">` : '<div class="plugin-icon-placeholder"></div>'}
@@ -225,7 +250,7 @@ function renderSearchResults(results) {
         <span>v${escapeHtml(p.latest_version)}</span>
       </div>
       <div class="plugin-card-actions">
-        <button class="btn btn-success btn-sm" onclick="showInstallDialog('${escapeJs(p.provider)}', '${escapeJs(p.id)}', '${escapeJs(p.name)}', ${activeServerId})">Install</button>
+        ${installBtn}
         <a href="${escapeHtml(p.project_url)}" target="_blank" class="btn btn-secondary btn-sm">View</a>
       </div>
     `;
@@ -235,6 +260,12 @@ function renderSearchResults(results) {
 }
 
 async function showInstallDialog(provider, projectId, name, serverId) {
+  const btn = document.querySelector('#plugin-install-dialog .btn-success');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+  }
+
   const dialog = document.getElementById('plugin-install-dialog');
   document.getElementById('install-provider').textContent = provider;
   document.getElementById('install-name').textContent = name;
@@ -269,6 +300,11 @@ async function showInstallDialog(provider, projectId, name, serverId) {
     });
   } catch (e) {
     versionSel.innerHTML = '<option value="">Latest (version list unavailable)</option>';
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Install';
   }
 }
 

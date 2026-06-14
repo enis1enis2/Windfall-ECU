@@ -16,8 +16,8 @@ function notify(msg, type = 'info') {
   setTimeout(() => el.remove(), 3500);
 }
 
-async function api(method, path, body) {
-  const opts = { method, headers: {} };
+async function api(method, path, body, signal) {
+  const opts = { method, headers: {}, signal };
   if (body && !(body instanceof FormData)) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);

@@ -522,14 +522,14 @@ def api_plugins_search():
     try: return jsonify(search_plugins(q, request.args.get('provider'),
                          server_type=request.args.get('server_type'),
                          game_version=request.args.get('game_version')))
-    except: return jsonify({'error': 'Search failed'}), 500
+    except Exception as e: app.logger.warning('plugin search: %s', e); return jsonify({'error': 'Search failed'}), 500
 
 @app.route('/api/plugins/versions/<provider>/<project_id>', methods=['GET'])
 @login_required
 @require_permission('plugins:search')
 def api_plugin_versions(provider, project_id):
     try: return jsonify(plugin_get_versions(provider, project_id))
-    except: return jsonify({'error': 'Failed to get versions'}), 500
+    except Exception as e: app.logger.warning('plugin versions: %s', e); return jsonify({'error': 'Failed to get versions'}), 500
 
 @app.route('/api/plugins/install', methods=['POST'])
 @login_required
