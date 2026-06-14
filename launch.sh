@@ -168,6 +168,11 @@ EOF
     fi
 fi
 
+# --- Free stale port ---
+if command -v fuser &>/dev/null; then
+    fuser -k 8080/tcp 2>/dev/null || true
+fi
+
 # --- Launch detached ---
 printf "\n"
 info "Starting Windfall ECU on http://0.0.0.0:8080"
