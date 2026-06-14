@@ -2,7 +2,6 @@ import os
 import tarfile
 import shutil
 from datetime import datetime
-from config import BACKUPS_DIR
 from models import get_server, create_backup_entry, get_backup, delete_backup_entry, get_backups as db_get_backups
 from path_util import safe_join, sanitize_name
 
@@ -14,13 +13,17 @@ def create_backup(server_id, name=None):
     if not os.path.isdir(server['path']): return None, 'Server directory not found'
 
     name = sanitize_name(name or f"{server['name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-    backup_dir = safe_join(BACKUPS_DIR, str(server_id))
+    backup_dir = safe_join(server['path'], 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     backup_path = safe_join(backup_dir, f'{name}.tar.gz')
 
     try:
+        backup_basename = os.path.basename(server['path'])
+        def _exclude_backups(ti):
+            parts = ti.name.split('/')
+            return None if len(parts) > 1 and parts[1] == 'backups' else ti
         with tarfile.open(backup_path, 'w:gz') as tar:
-            tar.add(server['path'], arcname=os.path.basename(server['path']))
+            tar.add(server['path'], arcname=backup_basename, filter=_exclude_backups)
     except Exception:
         return None, 'Backup failed'
 

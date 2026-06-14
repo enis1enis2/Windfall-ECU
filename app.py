@@ -2,7 +2,7 @@ import eventlet; eventlet.monkey_patch()
 import os, json, shutil, subprocess, psutil, gzip, time, sys, platform, pathlib
 from flask import Flask, render_template, request, jsonify, send_file, abort, session
 from flask_socketio import SocketIO
-from config import HOST, PORT, SECRET_KEY, SERVERS_DIR, BACKUPS_DIR
+from config import HOST, PORT, SECRET_KEY, SERVERS_DIR
 from path_util import safe_join, safe_path
 from models import init_db, get_servers, get_server, create_server, delete_server, update_server, get_setting, set_setting
 from server_manager import ServerProcess, get_server_process, register_server, unregister_server, clean_output
@@ -24,7 +24,6 @@ app.config['MAX_CONTENT_LENGTH'] = 1024 ** 3
 socketio = SocketIO(app, cors_allowed_origins=os.environ.get('GREATPANEL_ORIGIN', 'http://localhost:8080'), async_mode='eventlet')
 
 os.makedirs(SERVERS_DIR, exist_ok=True)
-os.makedirs(BACKUPS_DIR, exist_ok=True)
 
 # Kill leftover process on 8080
 try:
@@ -620,7 +619,7 @@ def api_admin_info():
     servers = get_servers()
     db_size = os.path.getsize('instances.db') if os.path.isfile('instances.db') else 0
     sdir_size = sum(f.stat().st_size for f in pathlib.Path(SERVERS_DIR).rglob('*') if f.is_file()) if os.path.isdir(SERVERS_DIR) else 0
-    bdir_size = sum(f.stat().st_size for f in pathlib.Path(BACKUPS_DIR).rglob('*') if f.is_file()) if os.path.isdir(BACKUPS_DIR) else 0
+    bdir_size = sum(f.stat().st_size for srv in servers for bp in [safe_join(srv['path'], 'backups')] if os.path.isdir(bp) for f in pathlib.Path(bp).rglob('*') if f.is_file())
     from server_manager import _servers
     procs = []
     for sid, sp in list(_servers.items()):
