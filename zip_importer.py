@@ -1,7 +1,8 @@
 import os, zipfile, tempfile, shutil, time, json, re
+from path_util import safe_path, safe_join, safe_write, sanitize_name, is_within_directory, is_within_directory
 from config import SERVERS_DIR
 from models import create_server, get_server
-from path_util import safe_path, safe_join, safe_write, sanitize_name
+from path_util import safe_path, safe_join, safe_write, sanitize_name, is_within_directory
 
 CHUNK_DIR = safe_join(SERVERS_DIR, '_chunks') if os.path.isdir(SERVERS_DIR) else None
 CHUNK_SIZE = 4 * 1024 * 1024
@@ -71,7 +72,11 @@ def import_zip(file_storage, server_name=None, server_type=None):
     os.makedirs(ed, exist_ok=True)
     file_storage.save(os.path.join(tmp, 'import.zip'))
     try:
-        with zipfile.ZipFile(os.path.join(tmp, 'import.zip')) as zf: zf.extractall(ed)
+        with zipfile.ZipFile(os.path.join(tmp, "import.zip")) as zf:
+            for member in zf.infolist():
+                if not is_within_directory(ed, os.path.join(ed, member.filename)):
+                    raise Exception("Potential Path Traversal in Zip")
+            zf.extractall(ed)
         jars = _extract_jars(ed)
         if not jars: shutil.rmtree(tmp); return _make_result(error='No .jar file found')
         jf, dt = _detect(jars)
@@ -138,7 +143,11 @@ def chunked_finalize(cid):
         emit_progress(cid, 100, 'extracting')
         ed = safe_join(tmp, 'extracted')
         os.makedirs(ed, exist_ok=True)
-        with zipfile.ZipFile(fpath) as zf: zf.extractall(ed)
+        with zipfile.ZipFile(fpath) as zf:
+            for member in zf.infolist():
+                if not is_within_directory(ed, os.path.join(ed, member.filename)):
+                    raise Exception("Potential Path Traversal in Zip")
+            zf.extractall(ed)
         jars = _extract_jars(ed)
         if not jars: raise ValueError('No .jar file found')
         jf, dt = _detect(jars)

@@ -1,9 +1,12 @@
+from auth import ROLES
 from flask import session, request
 from server_manager import get_server_process
 
 def setup_terminal_handlers(socketio):
     @socketio.on('connect_terminal')
     def handle_connect(data):
+        role = session.get('role', 'viewer')
+        if 'servers:console' not in ROLES.get(role, ROLES['viewer'])['permissions']: return
         if 'user_id' not in session: return
         sp = get_server_process(data.get('server_id'))
         if sp:
@@ -12,6 +15,8 @@ def setup_terminal_handlers(socketio):
 
     @socketio.on('terminal_input')
     def handle_input(data):
+        role = session.get('role', 'viewer')
+        if 'servers:start' not in ROLES.get(role, ROLES['viewer'])['permissions']: return
         if 'user_id' not in session: return
         sp = get_server_process(data.get('server_id'))
         if sp: sp.write_input(data.get('data', ''))
