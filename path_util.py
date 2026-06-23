@@ -17,12 +17,19 @@ def safe_path(base: str, name: str) -> str:
     return safe_join(base, safe)
 
 
-def safe_write(path, content):
+def safe_write(path: str, content: str) -> None:
+    import tempfile, os
     parent = os.path.dirname(path)
     if not os.path.isdir(parent):
         os.makedirs(parent, exist_ok=True)
-    with open(path, 'w') as f:
-        f.write(content)
+    fd, tmp_path = tempfile.mkstemp(dir=parent, prefix='.tmp_')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            f.write(content)
+        os.replace(tmp_path, path)
+    except Exception:
+        if os.path.exists(tmp_path): os.remove(tmp_path)
+        raise
 
 def is_within_directory(directory: str, target: str) -> bool:
     abs_directory = os.path.abspath(directory)
