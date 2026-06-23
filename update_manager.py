@@ -15,7 +15,7 @@ def _git(*args, timeout=30):
             for f in [out, err]:
                 f.close()
                 try: os.unlink(f.name)
-                except: pass
+                except Exception: pass
 
 def _find_python():
     candidates = ['python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10',
@@ -33,12 +33,12 @@ def _find_python():
                     ver = r.stdout.decode().strip()
                     if 'Python 3.' in ver:
                         return p
-            except: pass
+            except Exception: pass
     return sys.executable
 
 def _git_available():
     try: return subprocess.run(['git', '--version'], capture_output=True, timeout=5).returncode == 0
-    except: return False
+    except Exception: return False
 
 def check_updates():
     if not _git_available(): return {'update_available': False, 'error': 'git is not installed'}
@@ -49,7 +49,7 @@ def check_updates():
             log = _git('log', '--oneline', f'-{r}', 'HEAD..origin/main', timeout=10).stdout.strip()
             return {'update_available': True, 'commits_behind': r, 'log': log}
         return {'update_available': False, 'commits_behind': 0}
-    except: return {'update_available': False, 'error': 'Update check failed'}
+    except Exception: return {'update_available': False, 'error': 'Update check failed'}
 
 def install_updates():
     if not _git_available(): return {'success': False, 'error': 'git is not installed'}
@@ -62,10 +62,10 @@ def install_updates():
             try: subprocess.run([sys.executable, '-m', 'pip', 'install', '-r',
                                 os.path.join(BASE_DIR, 'requirements.txt'), '-q'],
                                cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
-            except: pass
+            except Exception: pass
             return {'success': True, 'output': r.stdout}
         return {'success': False, 'error': r.stderr}
-    except: return {'success': False, 'error': 'Install failed'}
+    except Exception: return {'success': False, 'error': 'Install failed'}
 
 def _restart_script():
     from config import PORT

@@ -161,6 +161,7 @@ def api_servers_list():
 @require_permission('servers:create')
 def api_servers_create():
     d = request.json
+    if not d.get("name"): return jsonify({"error": "Name is required"}), 400
     sp = safe_path(SERVERS_DIR, d.get('name', 'New Server'))
     os.makedirs(sp, exist_ok=True)
     return jsonify({'id': create_server(name=d.get('name', 'New Server'), path=sp, jar_file=d.get('jar_file'),
@@ -409,7 +410,7 @@ def api_console(server_id):
                     if fs > mx: f.seek(fs - mx); f.readline()
                     txt = clean_output(f.read()); lines = txt.splitlines(True)
                     total = len(lines); output = ''.join(lines[since:])
-            except: pass
+            except Exception: pass
     return jsonify({'output': output, 'total': total, 'running': running})
 
 # --- System ---
@@ -469,14 +470,14 @@ def api_download_types(): return jsonify(get_types())
 @require_permission('download:versions')
 def api_download_versions(server_type):
     try: return jsonify(get_versions(server_type))
-    except: return jsonify({'error': 'Failed to get versions'}), 500
+    except Exception: return jsonify({'error': 'Failed to get versions'}), 500
 
 @app.route('/api/download/builds/<server_type>/<version>', methods=['GET'])
 @login_required
 @require_permission('download:builds')
 def api_download_builds(server_type, version):
     try: return jsonify(get_builds(server_type, version))
-    except: return jsonify({'error': 'Failed to get builds'}), 500
+    except Exception: return jsonify({'error': 'Failed to get builds'}), 500
 
 @app.route('/api/download', methods=['POST'])
 @login_required
@@ -488,7 +489,7 @@ def api_download():
         sid, error = download_server(d['type'], d['version'], d.get('build'), d.get('name'))
         if error: return jsonify({'error': error}), 400
         return jsonify({'id': sid, 'status': 'downloaded'}), 201
-    except: return jsonify({'error': 'Download failed'}), 500
+    except Exception: return jsonify({'error': 'Download failed'}), 500
 
 @app.route('/api/servers/<int:server_id>/upgrade', methods=['POST'])
 @login_required
@@ -628,7 +629,7 @@ def api_admin_info():
         ram = 0
         if st['running'] and sp.process:
             try: ram = psutil.Process(sp.process.pid).memory_info().rss
-            except: pass
+            except Exception: pass
         procs.append({'server_id': sid, 'server_name': srv['name'] if srv else '?',
                        'pid': st.get('pid'), 'ram': ram, 'running': st['running'],
                        'uptime': int(time.time() - sp.process.create_time()) if st['running'] and sp.process else 0})

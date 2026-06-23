@@ -12,22 +12,22 @@ def get_db(row=False):
     try:
         yield conn
         conn.commit()
-    except:
+    except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
 
-def _fetchone(sql, params=()):
+def _fetchone(sql: str, params: tuple = ()) -> dict | None:
     with get_db(True) as c:
         r = c.execute(sql, params).fetchone()
         return dict(r) if r else None
 
-def _fetchall(sql, params=()):
+def _fetchall(sql: str, params: tuple = ()) -> list[dict]:
     with get_db(True) as c:
         return [dict(r) for r in c.execute(sql, params).fetchall()]
 
-def _execute(sql, params=()):
+def _execute(sql: str, params: tuple = ()) -> int:
     with get_db() as c:
         return c.execute(sql, params).lastrowid
 
@@ -60,6 +60,7 @@ def init_db():
 def get_servers():
     return _fetchall('SELECT * FROM servers ORDER BY created_at DESC')
 
+@lru_cache(maxsize=128)
 def get_server(server_id):
     return _fetchone('SELECT * FROM servers WHERE id = ?', (server_id,))
 
@@ -68,9 +69,11 @@ def create_server(name, path, jar_file=None, java_args='-Xmx1G -Xms1G', server_t
                     (name, path, jar_file, java_args, server_type, docker_mode))
 
 def delete_server(server_id):
+    get_server.cache_clear()
     _execute('DELETE FROM servers WHERE id = ?', (server_id,))
 
 def update_server(server_id, **kwargs):
+    get_server.cache_clear()
     if not kwargs:
         return
     with get_db() as c:
