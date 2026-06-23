@@ -92,7 +92,7 @@ def import_zip(file_storage, server_name=None, server_type=None):
     except Exception as e:
         shutil.rmtree(tmp, ignore_errors=True)
         if sp and os.path.exists(sp): shutil.rmtree(sp, ignore_errors=True)
-        return _make_result(error=str(e))
+        return _make_result(error="Import failed")
 
 # --- Chunked upload ---
 def chunked_init(filename, total_size, server_name=None, server_type=None):
@@ -170,7 +170,7 @@ def chunked_finalize(cid):
         shutil.rmtree(tmp, ignore_errors=True); shutil.rmtree(cd, ignore_errors=True)
         if os.path.exists(mf): os.remove(mf)
         if sp and os.path.exists(sp): shutil.rmtree(sp, ignore_errors=True)
-        return _make_result(error=str(e))
+        return _make_result(error="Import failed")
 
 def _clean_stale():
     cd = _ensure_chunk_dir()
