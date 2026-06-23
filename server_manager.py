@@ -11,8 +11,7 @@ ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
 MC_COLOR_RE = re.compile(r'§[0-9a-fklmnor]')
 
 def clean_output(text):
-    text = ANSI_RE.sub('', text)
-    text = MC_COLOR_RE.sub('', text)
+    # We no longer strip ANSI colors to allow xterm.js to render them
     return text
 
 
@@ -157,19 +156,23 @@ class ServerProcess:
 
 
 _servers = {}
+_servers_lock = threading.Lock()
 
 def get_server_process(server_id):
-    return _servers.get(server_id)
+    with _servers_lock:
+        return _servers.get(server_id)
 
 def register_server(server_id, server_proc):
-    _servers[server_id] = server_proc
+    with _servers_lock:
+        _servers[server_id] = server_proc
 
 def unregister_server(server_id):
-    if server_id in _servers:
-        proc = _servers[server_id]
-        if proc:
-            proc.stop()
-        del _servers[server_id]
+    with _servers_lock:
+        if server_id in _servers:
+            proc = _servers[server_id]
+            if proc:
+                proc.stop()
+            del _servers[server_id]
 
 
 
