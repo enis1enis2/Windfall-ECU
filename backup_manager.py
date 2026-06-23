@@ -25,6 +25,7 @@ def create_backup(server_id, name=None):
         with tarfile.open(backup_path, 'w:gz') as tar:
             tar.add(server['path'], arcname=backup_basename, filter=_exclude_backups)
     except Exception:
+        if os.path.exists(backup_path): os.remove(backup_path)
         return None, 'Backup failed'
 
     backup_id = create_backup_entry(server_id, name, backup_path, os.path.getsize(backup_path))
@@ -45,9 +46,13 @@ def restore_backup(backup_id):
     if not os.path.isfile(bp): return False, 'Backup file not found'
 
     tmp = spath + '_restore_tmp'
+    from path_util import is_within_directory
     try:
         if os.path.exists(tmp): shutil.rmtree(tmp)
         with tarfile.open(bp, 'r:gz') as tar:
+            for member in tar.getmembers():
+                if not is_within_directory(tmp, os.path.join(tmp, member.name)):
+                    raise Exception('Potential Path Traversal in Tar')
             tar.extractall(tmp)
 
         items = []
@@ -59,13 +64,13 @@ def restore_backup(backup_id):
             shutil.rmtree(tmp)
             return False, 'Backup is empty'
 
-        for item in os.listdir(sp):
-            ip = os.path.join(sp, item)
+        for item in os.listdir(spath):
+            ip = os.path.join(spath, item)
             if os.path.isfile(ip) and item == 'session.lock': continue
             (shutil.rmtree if os.path.isdir(ip) else os.remove)(ip)
 
         for item in items:
-            s, d = os.path.join(tmp, item), os.path.join(sp, item)
+            s, d = os.path.join(tmp, item), os.path.join(spath, item)
             if os.path.isdir(s):
                 shutil.copytree(s, d, dirs_exist_ok=True)
             else:

@@ -8,7 +8,7 @@ def check_docker():
     try:
         DOCKER_AVAILABLE = subprocess.run(['docker', '--version'], capture_output=True, timeout=5).returncode == 0
         return DOCKER_AVAILABLE
-    except: DOCKER_AVAILABLE = False; return False
+    except Exception: DOCKER_AVAILABLE = False; return False
 
 def create_docker_container(server_id, server_name, server_path, jar_file, java_args='-Xmx1G -Xms1G'):
     if not check_docker(): return False, 'Docker is not available'
@@ -25,4 +25,4 @@ def create_docker_container(server_id, server_name, server_path, jar_file, java_
         if r.returncode != 0: return False, f'Docker run failed: {r.stderr[:500]}'
         return True, cn
     except subprocess.TimeoutExpired: return False, 'Docker operation timed out'
-    except: return False, 'Docker build/run failed'
+    except Exception: return False, 'Docker build/run failed'
