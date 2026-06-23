@@ -11,8 +11,7 @@ ANSI_RE = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
 MC_COLOR_RE = re.compile(r'§[0-9a-fklmnor]')
 
 def clean_output(text):
-    text = ANSI_RE.sub('', text)
-    text = MC_COLOR_RE.sub('', text)
+    # We no longer strip ANSI colors to allow xterm.js to render them
     return text
 
 

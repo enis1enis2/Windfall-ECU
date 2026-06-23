@@ -45,9 +45,13 @@ def restore_backup(backup_id):
     if not os.path.isfile(bp): return False, 'Backup file not found'
 
     tmp = spath + '_restore_tmp'
+    from path_util import is_within_directory
     try:
         if os.path.exists(tmp): shutil.rmtree(tmp)
         with tarfile.open(bp, 'r:gz') as tar:
+            for member in tar.getmembers():
+                if not is_within_directory(tmp, os.path.join(tmp, member.name)):
+                    raise Exception('Potential Path Traversal in Tar')
             tar.extractall(tmp)
 
         items = []

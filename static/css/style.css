@@ -459,15 +459,6 @@ body {
 .terminal-container .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
 .terminal-container .xterm-viewport::-webkit-scrollbar-thumb { background: var(--term-scrollbar); border-radius: 3px; }
 
-.console-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--term-bar-bg);
-  border-top: 1px solid var(--term-bar-border);
-  flex-shrink: 0;
-}
 .console-prompt {
   color: var(--term-prompt);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -475,17 +466,6 @@ body {
   font-weight: 700;
   user-select: none;
 }
-#console-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--term-fg);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 13px;
-  caret-color: var(--term-cursor);
-}
-#console-input::placeholder { color: var(--term-black); }
 .console-status {
   color: var(--term-black);
   font-size: 16px;
@@ -1016,6 +996,166 @@ body {
   .server-list-item { padding: 9px 12px; }
   .tabs-vertical .tab { padding: 10px 12px; font-size: 12px; }
   .terminal-container .xterm { padding: 8px; font-size: 12px; }
-  .console-bar { padding: 6px 8px; }
-  #console-input { font-size: 12px; }
+}
+
+/* Terminal & Console Improvements */
+.terminal-wrapper {
+  background: var(--terminal-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 12px;
+  min-height: 400px;
+}
+.console-controls {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.console-input-row {
+  display: flex;
+  gap: 8px;
+}
+.console-actions-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.console-actions-row .btn {
+  min-width: 100px;
+}
+.console-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  justify-content: flex-end;
+}
+
+/* Terminal & Console Improvements */
+.terminal-wrapper {
+  background: var(--terminal-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 12px;
+  min-height: 400px;
+}
+.console-controls {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.console-input-row {
+  display: flex;
+  gap: 8px;
+}
+.console-actions-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.console-actions-row .btn {
+  min-width: 100px;
+}
+.console-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  justify-content: flex-end;
+}
+
+/* Terminal & Console Improvements */
+.terminal-wrapper {
+  background: var(--terminal-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 12px;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+#xterm-container {
+  flex: 1;
+}
+.console-controls {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.console-input-row {
+  display: flex;
+  gap: 8px;
+}
+#console-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+#console-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.console-actions-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.console-actions-row .btn {
+  min-width: 120px;
+  font-weight: 600;
+}
+.console-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  justify-content: flex-end;
+}
+.console-status.live {
+  color: var(--success);
+  text-shadow: 0 0 8px var(--success);
+}
+
+.terminal-container .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  text-align: center;
+  background: var(--terminal-bg);
+  border-radius: var(--radius-md);
+}
+.terminal-container .empty-state p:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
